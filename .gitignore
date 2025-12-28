@@ -50,6 +50,13 @@ android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 lib/firebase_options.dart
 
+# Notification Worker (Node.js service account & secrets)
+notification-worker/serviceAccountKey.json
+notification-worker/node_modules/
+notification-worker/package-lock.json
+notification-worker/*.pem
+notification-worker/*.key
+
 # API Keys & Secrets
 .env
 .env.local
@@ -60,7 +67,9 @@ lib/firebase_options.dart
 api_keys.dart
 secrets.dart
 config/secrets.json
+lib/config/web_push_config.dart
 
 # Metadata
 .metadata
 ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md
+web/firebase-messaging-sw.js
