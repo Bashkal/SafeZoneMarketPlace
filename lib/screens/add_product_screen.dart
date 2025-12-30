@@ -1,26 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:io';
-import '../services/report_service.dart';
+import '../services/product_service.dart';
 import '../services/auth_service.dart';
-import '../models/report_model.dart';
+import '../models/product_model.dart';
 import 'location_picker_screen.dart';
 import '../widgets/image_from_string.dart';
 
-class AddReportScreen extends StatefulWidget {
-  final Report? existingReport;
+class AddProductScreen extends StatefulWidget {
+  final Product? existingProduct;
 
-  const AddReportScreen({super.key, this.existingReport});
+  const AddProductScreen({super.key, this.existingProduct});
 
   @override
-  State<AddReportScreen> createState() => _AddReportScreenState();
+  State<AddProductScreen> createState() => _AddProductScreenState();
 }
 
-class _AddReportScreenState extends State<AddReportScreen> {
+class _AddProductScreenState extends State<AddProductScreen> {
   static const double _maxImageWidth = 1920;
   static const double _maxImageHeight = 1080;
   static const int _imageQuality = 85;
@@ -30,9 +33,13 @@ class _AddReportScreenState extends State<AddReportScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _priceController = TextEditingController();
 
-  ReportCategory _selectedCategory = ReportCategory.other;
+  ProductCategory _selectedCategory = ProductCategory.other;
+  ProductStatus _selectedStatus = ProductStatus.available;
+  ProductCondition _selectedCondition = ProductCondition.good;
   final List<File> _images = [];
+  final List<Uint8List> _webImages = [];
   final List<String> _existingPhotoUrls = [];
   final List<String> _removedPhotoUrls = [];
   LatLng? _selectedLocation;
@@ -42,27 +49,31 @@ class _AddReportScreenState extends State<AddReportScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.existingReport != null) {
-      _loadExistingReport();
+    if (widget.existingProduct != null) {
+      _loadExistingProduct();
     } else {
       _getCurrentLocation();
     }
   }
 
-  void _loadExistingReport() {
-    final report = widget.existingReport!;
-    _titleController.text = report.title;
-    _descriptionController.text = report.description;
-    _selectedCategory = report.category;
-    _selectedLocation = report.location;
-    _locationAddress = report.locationAddress;
-    _existingPhotoUrls.addAll(report.photoUrls);
+  void _loadExistingProduct() {
+    final product = widget.existingProduct!;
+    _titleController.text = product.title;
+    _descriptionController.text = product.description;
+    _priceController.text = product.price.toString();
+    _selectedCategory = product.category;
+    _selectedStatus = product.status;
+    _selectedCondition = product.condition;
+    _selectedLocation = product.location;
+    _locationAddress = product.locationAddress;
+    _existingPhotoUrls.addAll(product.photoUrls);
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
@@ -103,6 +114,25 @@ class _AddReportScreenState extends State<AddReportScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    // Only use file_picker on web, never instantiate ImagePicker on web
+    if (kIsWeb) {
+      try {
+        final result = await FilePicker.platform.pickFiles(type: FileType.image);
+        if (result != null && result.files.single.bytes != null) {
+          setState(() {
+            _webImages.add(result.files.single.bytes!);
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to pick image: $e')),
+          );
+        }
+      }
+      return;
+    }
+    // Only use image_picker on mobile/desktop
     try {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
@@ -111,7 +141,6 @@ class _AddReportScreenState extends State<AddReportScreen> {
         maxHeight: _maxImageHeight,
         imageQuality: _imageQuality,
       );
-
       if (pickedFile != null) {
         setState(() {
           _images.add(File(pickedFile.path));
@@ -119,9 +148,9 @@ class _AddReportScreenState extends State<AddReportScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick image: $e')),
+        );
       }
     }
   }
@@ -173,27 +202,27 @@ class _AddReportScreenState extends State<AddReportScreen> {
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
-      final reportService = Provider.of<ReportService>(context, listen: false);
+      final productService = Provider.of<ProductService>(context, listen: false);
 
       final currentUser = authService.currentUser;
       if (currentUser == null) {
         throw Exception('Authentication required. Please log in again.');
       }
 
-      final report = _createReport(currentUser);
-      final isUpdate = widget.existingReport != null;
+      final product = _createProduct(currentUser);
+      final isUpdate = widget.existingProduct != null;
 
       if (isUpdate) {
-        await reportService.updateReport(
-          widget.existingReport!.id!,
-          report,
+        await productService.updateProduct(
+          widget.existingProduct!.id!,
+          product,
           _images.isNotEmpty ? _images : null,
           removedPhotoUrls: _removedPhotoUrls.isNotEmpty
               ? _removedPhotoUrls
               : null,
         );
       } else {
-        await reportService.createReport(report, _images);
+        await productService.createProduct(product, _images);
       }
 
       // Don't wait for user data refresh - do it in background
@@ -205,8 +234,8 @@ class _AddReportScreenState extends State<AddReportScreen> {
           SnackBar(
             content: Text(
               isUpdate
-                  ? 'Report updated successfully'
-                  : 'Report submitted successfully',
+                  ? 'Product updated successfully'
+                  : 'Product submitted successfully',
             ),
           ),
         );
@@ -215,7 +244,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to submit report: $e'),
+            content: Text('Failed to submit product: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -232,7 +261,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.existingReport != null ? 'Edit Report' : 'Report a Problem',
+          widget.existingProduct != null ? 'Edit Product' : 'Add Product',
         ),
       ),
       body: Form(
@@ -248,7 +277,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
               controller: _titleController,
               decoration: const InputDecoration(
                 labelText: 'Title',
-                hintText: 'e.g., Pothole on Main Street',
+                hintText: 'e.g., Vintage Wooden Chair',
                 prefixIcon: Icon(Icons.title),
               ),
               maxLength: _maxTitleLength,
@@ -286,15 +315,77 @@ class _AddReportScreenState extends State<AddReportScreen> {
               },
             ),
             const SizedBox(height: 16),
+            // Price
+            TextFormField(
+              controller: _priceController,
+              decoration: const InputDecoration(
+                labelText: 'Price',
+                hintText: 'Enter the price',
+                prefixIcon: Icon(Icons.attach_money),
+              ),
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter a price';
+                }
+                final price = double.tryParse(value.trim());
+                if (price == null || price < 0) {
+                  return 'Please enter a valid price';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            // Status 
+
+            DropdownButtonFormField<ProductStatus>(
+              initialValue: _selectedStatus,
+              decoration: const InputDecoration(
+                labelText: 'Status',
+                prefixIcon: Icon(Icons.info),
+              ),
+              items: ProductStatus.values.map((status) {
+                return DropdownMenuItem(
+                  value: status,
+                  child: Text(status.displayName),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedStatus = value);
+                }
+              },
+            ),
+            const SizedBox(height: 24),
+            // Condition
+            DropdownButtonFormField<ProductCondition>(
+              initialValue: _selectedCondition,
+              decoration: const InputDecoration(
+                labelText: 'Condition',
+                prefixIcon: Icon(Icons.build_circle),
+              ),
+              items: ProductCondition.values.map((condition) {
+                return DropdownMenuItem(
+                  value: condition,
+                  child: Text(condition.displayName),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedCondition = value);
+                }
+              },
+            ),
+            const SizedBox(height: 24),
 
             // Category
-            DropdownButtonFormField<ReportCategory>(
+            DropdownButtonFormField<ProductCategory>(
               initialValue: _selectedCategory,
               decoration: const InputDecoration(
                 labelText: 'Category',
                 prefixIcon: Icon(Icons.category),
               ),
-              items: ReportCategory.values.map((category) {
+              items: ProductCategory.values.map((category) {
                 return DropdownMenuItem(
                   value: category,
                   child: Text(category.displayName),
@@ -360,45 +451,83 @@ class _AddReportScreenState extends State<AddReportScreen> {
               ),
 
             // New photos
-            if (_images.isNotEmpty)
+            if (_images.isNotEmpty || _webImages.isNotEmpty)
               SizedBox(
                 height: 100,
-                child: ListView.builder(
+                child: ListView(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _images.length,
-                  itemBuilder: (context, index) {
-                    return Stack(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              _images[index],
-                              width: 100,
-                              height: 100,
-                              fit: BoxFit.cover,
+                  children: [
+                    ..._images.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final file = entry.value;
+                      return Stack(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                file,
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
-                        ),
-                        Positioned(
-                          top: 4,
-                          right: 12,
-                          child: IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            onPressed: () {
-                              setState(() => _images.removeAt(index));
-                            },
-                            style: IconButton.styleFrom(
-                              backgroundColor: Colors.black54,
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(24, 24),
+                          Positioned(
+                            top: 4,
+                            right: 12,
+                            child: IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              onPressed: () {
+                                setState(() => _images.removeAt(index));
+                              },
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.black54,
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(24, 24),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
+                        ],
+                      );
+                    }),
+                    ..._webImages.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final bytes = entry.value;
+                      return Stack(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                bytes,
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 12,
+                            child: IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              onPressed: () {
+                                setState(() => _webImages.removeAt(index));
+                              },
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.black54,
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(24, 24),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ],
                 ),
               ),
             const SizedBox(height: 8),
@@ -448,9 +577,9 @@ class _AddReportScreenState extends State<AddReportScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Text(
-                      widget.existingReport != null
-                          ? 'Update Report'
-                          : 'Submit Report',
+                      widget.existingProduct != null
+                          ? 'Update Product'
+                          : 'Submit Product',
                     ),
             ),
           ],
@@ -461,13 +590,15 @@ class _AddReportScreenState extends State<AddReportScreen> {
     );
   }
 
-  Report _createReport(dynamic currentUser) {
-    final existing = widget.existingReport;
-    return Report(
+  Product _createProduct(dynamic currentUser) {
+    final existing = widget.existingProduct;
+    return Product(
       id: existing?.id,
       title: _titleController.text.trim(),
       description: _descriptionController.text.trim(),
+      price: double.parse(_priceController.text.trim()),
       category: _selectedCategory,
+      condition: _selectedCondition,
       photoUrls: _existingPhotoUrls,
       location: _selectedLocation!,
       locationAddress: _locationAddress,
@@ -475,7 +606,7 @@ class _AddReportScreenState extends State<AddReportScreen> {
       userName: currentUser.displayName ?? 'Anonymous',
       userPhotoUrl: currentUser.photoURL,
       createdAt: existing?.createdAt ?? DateTime.now(),
-      status: existing?.status ?? ReportStatus.pending,
+      status: _selectedStatus,
     );
   }
 }

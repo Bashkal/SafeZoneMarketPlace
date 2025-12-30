@@ -73,3 +73,4 @@ lib/config/web_push_config.dart
 .metadata
 ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md
 web/firebase-messaging-sw.js
+notification-worker/worker.js

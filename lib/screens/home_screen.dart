@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'feed_screen.dart';
 import 'map_screen.dart';
-import 'my_reports_screen.dart';
+import 'my_products_screen.dart';
 import 'profile_screen.dart';
-import 'add_report_screen.dart';
+import 'add_product_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,9 +16,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const _destinations = <NavigationDestination>[
     NavigationDestination(
-      icon: Icon(Icons.feed_outlined),
-      selectedIcon: Icon(Icons.feed),
-      label: 'Feed',
+      icon: Icon(Icons.storefront_outlined),
+      selectedIcon: Icon(Icons.storefront),
+      label: 'Marketplace',
     ),
     NavigationDestination(
       icon: Icon(Icons.map_outlined),
@@ -28,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
     NavigationDestination(
       icon: Icon(Icons.description_outlined),
       selectedIcon: Icon(Icons.description),
-      label: 'My Reports',
+      label: 'My products',
     ),
     NavigationDestination(
       icon: Icon(Icons.person_outline),
@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _screens = const [
       FeedScreen(),
       MapScreen(),
-      MyReportsScreen(),
+      MyProductsScreen(),
       ProfileScreen(),
     ];
   }
@@ -60,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _navigateToAddReport() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const AddReportScreen()),
+      MaterialPageRoute(builder: (context) => const AddProductScreen()),
     );
   }
 
@@ -79,9 +79,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 labelType: NavigationRailLabelType.all,
                 destinations: const [
                   NavigationRailDestination(
-                    icon: Icon(Icons.feed_outlined),
-                    selectedIcon: Icon(Icons.feed),
-                    label: Text('Feed'),
+                    icon: Icon(Icons.storefront_outlined),
+                    selectedIcon: Icon(Icons.storefront),
+                    label: Text('Marketplace'),
                   ),
                   NavigationRailDestination(
                     icon: Icon(Icons.map_outlined),
@@ -91,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   NavigationRailDestination(
                     icon: Icon(Icons.description_outlined),
                     selectedIcon: Icon(Icons.description),
-                    label: Text('My Reports'),
+                    label: Text('My Products'),
                   ),
                   NavigationRailDestination(
                     icon: Icon(Icons.person_outline),

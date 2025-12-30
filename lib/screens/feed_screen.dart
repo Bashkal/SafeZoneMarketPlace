@@ -3,10 +3,10 @@ import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../widgets/image_from_string.dart';
-import '../services/report_service.dart';
+import '../services/product_service.dart';
 import '../services/auth_service.dart';
-import '../models/report_model.dart';
-import 'add_report_screen.dart';
+import '../models/product_model.dart';
+import 'add_product_screen.dart';
 
 
 class FeedScreen extends StatefulWidget {
@@ -17,34 +17,42 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
-  ReportStatus? _selectedStatusFilter;
-  ReportCategory? _selectedCategoryFilter;
+  ProductStatus? _selectedStatusFilter;
+  ProductCategory? _selectedCategoryFilter;
+  ProductCondition? _selectedConditionFilter;
 
   bool get _hasFilters =>
-      _selectedStatusFilter != null || _selectedCategoryFilter != null;
+      _selectedStatusFilter != null || _selectedCategoryFilter != null || _selectedConditionFilter != null;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ReportService>(context, listen: false).fetchReports();
+      Provider.of<ProductService>(context, listen: false).fetchProducts();
     });
   }
 
-  List<Report> _filterReports(List<Report> reports) {
-    var filtered = reports;
+  List<Product> _filterProducts(List<Product> products) {
+    var filtered = products;
 
     // Filter by status
     if (_selectedStatusFilter != null) {
       filtered = filtered
-          .where((report) => report.status == _selectedStatusFilter)
+          .where((product) => product.status == _selectedStatusFilter)
           .toList();
     }
 
     // Filter by category
     if (_selectedCategoryFilter != null) {
       filtered = filtered
-          .where((report) => report.category == _selectedCategoryFilter)
+          .where((product) => product.category == _selectedCategoryFilter)
+          .toList();
+    }
+
+    // Filter by condition
+    if (_selectedConditionFilter != null) {
+      filtered = filtered
+          .where((product) => product.condition == _selectedConditionFilter)
           .toList();
     }
 
@@ -52,16 +60,16 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 
   void _openSearch() {
-    final reportService = Provider.of<ReportService>(context, listen: false);
+    final productService = Provider.of<ProductService>(context, listen: false);
     final authService = Provider.of<AuthService>(context, listen: false);
     showSearch(
       context: context,
-      delegate: ReportSearchDelegate(
-        reports: reportService.reports,
+      delegate: ProductSearchDelegate(
+        products: productService.products,
         currentUserId: authService.currentUser?.uid ?? '',
-        onLike: (reportId) {
+        onFavorite: (productId) {
           if (authService.currentUser != null) {
-            reportService.toggleLike(reportId, authService.currentUser!.uid);
+            productService.toggleFavorite(productId, authService.currentUser!.uid);
           }
         },
       ),
@@ -70,24 +78,24 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final reportService = Provider.of<ReportService>(context);
+    final productService = Provider.of<ProductService>(context);
     final authService = Provider.of<AuthService>(context);
-    final filteredReports = _filterReports(reportService.reports);
+    final filteredProducts = _filterProducts(productService.products);
 
     return Scaffold(
       appBar: AppBar(
         title: const Row(
           children: [
-            Icon(Icons.home_work_rounded),
+            Icon(Icons.storefront),
             SizedBox(width: 8),
-            Text('Community Watch'),
+            Text('Community Marketplace'),
           ],
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: _openSearch,
-            tooltip: 'Search reports',
+            tooltip: 'Search products',
           ),
         ],
       ),
@@ -103,7 +111,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   children: [
                     // Status Filter Button
                     Expanded(
-                  child: PopupMenuButton<ReportStatus?>(
+                  child: PopupMenuButton<ProductStatus?>(
                     tooltip: 'Filter by Status',
                     onSelected: (value) {
                       setState(() => _selectedStatusFilter = value);
@@ -176,58 +184,24 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
                       const PopupMenuDivider(),
                       PopupMenuItem(
-                        value: ReportStatus.pending,
+                        value: ProductStatus.soldOut,
                         child: Row(
                           children: [
                             Container(
                               width: 12,
                               height: 12,
                               decoration: const BoxDecoration(
-                                color: Colors.orange,
+                                color: Colors.grey,
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(ReportStatus.pending.displayName),
+                            Text(ProductStatus.soldOut.displayName),
                           ],
                         ),
                       ),
                       PopupMenuItem(
-                        value: ReportStatus.approved,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                color: Colors.blue,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(ReportStatus.approved.displayName),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: ReportStatus.inProgress,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                color: Colors.amber,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(ReportStatus.inProgress.displayName),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: ReportStatus.resolved,
+                        value: ProductStatus.available,
                         child: Row(
                           children: [
                             Container(
@@ -239,34 +213,54 @@ class _FeedScreenState extends State<FeedScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(ReportStatus.resolved.displayName),
+                            Text(ProductStatus.available.displayName),
                           ],
                         ),
                       ),
+                      
                       PopupMenuItem(
-                        value: ReportStatus.rejected,
+                        value: ProductStatus.reserved,
                         child: Row(
                           children: [
                             Container(
                               width: 12,
                               height: 12,
                               decoration: const BoxDecoration(
-                                color: Colors.red,
+                                color: Colors.amber,
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Text(ReportStatus.rejected.displayName),
+                            Text(ProductStatus.reserved.displayName),
                           ],
                         ),
                       ),
+                      PopupMenuItem(
+                        value: ProductStatus.free,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(ProductStatus.free.displayName),
+                          ],
+                        ),
+                      ),
+                    
+
                     ],
                   ),
                 ),
                 const SizedBox(width: 12),
                 // Category Filter Button
                 Expanded(
-                  child: PopupMenuButton<ReportCategory?>(
+                  child: PopupMenuButton<ProductCategory?>(
                     tooltip: 'Filter by Category',
                     onSelected: (value) {
                       setState(() => _selectedCategoryFilter = value);
@@ -339,98 +333,248 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
                       const PopupMenuDivider(),
                       PopupMenuItem(
-                        value: ReportCategory.roadHazard,
+                        value: ProductCategory.electronics,
                         child: Row(
                           children: [
                             const Icon(Icons.warning, size: 18),
                             const SizedBox(width: 8),
-                            Text(ReportCategory.roadHazard.displayName),
+                            Text(ProductCategory.electronics.displayName),
                           ],
                         ),
                       ),
                       PopupMenuItem(
-                        value: ReportCategory.streetlight,
+                        value: ProductCategory.furniture,
                         child: Row(
                           children: [
                             const Icon(Icons.lightbulb, size: 18),
                             const SizedBox(width: 8),
-                            Text(ReportCategory.streetlight.displayName),
+                            Text(ProductCategory.furniture.displayName),
                           ],
                         ),
                       ),
                       PopupMenuItem(
-                        value: ReportCategory.graffiti,
+                        value: ProductCategory.clothing,
                         child: Row(
                           children: [
-                            const Icon(Icons.brush, size: 18),
+                            const Icon(Icons.checkroom, size: 18),
                             const SizedBox(width: 8),
-                            Text(ReportCategory.graffiti.displayName),
+                            Text(ProductCategory.clothing.displayName),
                           ],
                         ),
                       ),
                       PopupMenuItem(
-                        value: ReportCategory.waste,
+                        value: ProductCategory.books,
                         child: Row(
                           children: [
-                            const Icon(Icons.delete, size: 18),
+                            const Icon(Icons.book, size: 18),
                             const SizedBox(width: 8),
-                            Text(ReportCategory.waste.displayName),
+                            Text(ProductCategory.books.displayName),
                           ],
                         ),
                       ),
                       PopupMenuItem(
-                        value: ReportCategory.noise,
+                        value: ProductCategory.toys,
                         child: Row(
                           children: [
-                            const Icon(Icons.volume_up, size: 18),
+                            const Icon(Icons.toys, size: 18),
                             const SizedBox(width: 8),
-                            Text(ReportCategory.noise.displayName),
+                            Text(ProductCategory.toys.displayName),
                           ],
                         ),
                       ),
                       PopupMenuItem(
-                        value: ReportCategory.parking,
+                        value: ProductCategory.vehicles,
                         child: Row(
                           children: [
-                            const Icon(Icons.local_parking, size: 18),
+                            const Icon(Icons.directions_car, size: 18),
                             const SizedBox(width: 8),
-                            Text(ReportCategory.parking.displayName),
+                            Text(ProductCategory.vehicles.displayName),
                           ],
                         ),
                       ),
                       PopupMenuItem(
-                        value: ReportCategory.lostPet,
+                        value: ProductCategory.homegarden,
                         child: Row(
                           children: [
-                            const Icon(Icons.pets, size: 18),
+                            const Icon(Icons.grass, size: 18),
                             const SizedBox(width: 8),
-                            Text(ReportCategory.lostPet.displayName),
+                            Text(ProductCategory.homegarden.displayName),
                           ],
                         ),
                       ),
                       PopupMenuItem(
-                        value: ReportCategory.foundPet,
+                        value: ProductCategory.sports,
                         child: Row(
                           children: [
-                            const Icon(Icons.pets, size: 18),
+                            const Icon(Icons.sports_soccer, size: 18),
                             const SizedBox(width: 8),
-                            Text(ReportCategory.foundPet.displayName),
+                            Text(ProductCategory.sports.displayName),
                           ],
                         ),
                       ),
                       PopupMenuItem(
-                        value: ReportCategory.other,
+                        value: ProductCategory.healthbeauty,
                         child: Row(
                           children: [
-                            const Icon(Icons.info, size: 18),
+                            const Icon(Icons.health_and_safety, size: 18),
                             const SizedBox(width: 8),
-                            Text(ReportCategory.other.displayName),
+                            Text(ProductCategory.healthbeauty.displayName),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: ProductCategory.toolsandequipment,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.build, size: 18),
+                            const SizedBox(width: 8),
+                            Text(ProductCategory.toolsandequipment.displayName),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: ProductCategory.other,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.category, size: 18),
+                            const SizedBox(width: 8),
+                            Text(ProductCategory.other.displayName),
                           ],
                         ),
                       ),
                     ],
                   ),
                 ),
+                //Condition Filter
+                Expanded(
+                  child: PopupMenuButton<ProductCondition?>(
+                    tooltip: 'Filter by Condition',
+                    onSelected: (value) {
+                      setState(() => _selectedConditionFilter = value);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _selectedConditionFilter != null
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedConditionFilter != null
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outline,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.category,
+                            size: 18,
+                            color: _selectedConditionFilter != null
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _selectedConditionFilter != null
+                                  ? _selectedConditionFilter!.displayName
+                                  : 'Condition',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _selectedConditionFilter != null
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_drop_down,
+                            size: 18,
+                            color: _selectedConditionFilter != null
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                    ),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: null,
+                        child: Text('All Conditions'),
+                      ),
+                      const PopupMenuDivider(),
+                      PopupMenuItem(
+                        value: ProductCondition.newCondition,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.auto_awesome, size: 18),
+                            const SizedBox(width: 8),
+                            Text(ProductCondition.newCondition.displayName),
+                          ],
+                        ),
+                      ),
+                       PopupMenuItem(
+                        value: ProductCondition.likeNew,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.auto_fix_high, size: 18),
+                            const SizedBox(width: 8),
+                            Text(ProductCondition.likeNew.displayName),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: ProductCondition.good,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.thumb_up, size: 18),
+                            const SizedBox(width: 8),
+                            Text(ProductCondition.good.displayName),
+                          ],
+                        ),
+                      ),
+                     
+                      PopupMenuItem(
+                        value: ProductCondition.fair,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.thumbs_up_down, size: 18),
+                            const SizedBox(width: 8),
+                            Text(ProductCondition.fair.displayName),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: ProductCondition.poor,
+                        child: Row(
+                          children: [
+                            const Icon(Icons.sentiment_dissatisfied, size: 18),
+                            const SizedBox(width: 8),
+                            Text(ProductCondition.poor.displayName),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Clear Filters Button
                 if (_hasFilters) ...[
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
@@ -454,13 +598,13 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
           ),
 
-          // Reports list
+          // Products list
           Expanded(
-            child: reportService.isLoading
+            child: productService.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : filteredReports.isEmpty
+                : filteredProducts.isEmpty
                 ? RefreshIndicator(
-                    onRefresh: () => reportService.fetchReports(),
+                    onRefresh: () => productService.fetchProducts(),
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
@@ -477,12 +621,12 @@ class _FeedScreenState extends State<FeedScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No reports found',
+                              'No products found',
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Be the first to report an issue!',
+                              'Be the first to add a product!',
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     color: Theme.of(
@@ -497,19 +641,19 @@ class _FeedScreenState extends State<FeedScreen> {
                     ),
                   )
                 : RefreshIndicator(
-                    onRefresh: () => reportService.fetchReports(),
+                    onRefresh: () => productService.fetchProducts(),
                     child: ListView.builder(
                       padding: const EdgeInsets.only(bottom: 80),
-                      itemCount: filteredReports.length,
+                      itemCount: filteredProducts.length,
                       itemBuilder: (context, index) {
-                        final report = filteredReports[index];
-                        return ReportCard(
-                          report: report,
+                        final product = filteredProducts[index];
+                        return ProductCard(
+                          product: product,
                           currentUserId: authService.currentUser?.uid ?? '',
-                          onLike: () {
+                          onFavorite: () {
                             if (authService.currentUser != null) {
-                              reportService.toggleLike(
-                                report.id!,
+                              productService.toggleFavorite(
+                                product.id!,
                                 authService.currentUser!.uid,
                               );
                             }
@@ -527,20 +671,20 @@ class _FeedScreenState extends State<FeedScreen> {
   }
 }
 
-// Search Delegate for searching reports
-class ReportSearchDelegate extends SearchDelegate<Report?> {
-  final List<Report> reports;
+// Search Delegate for searching products
+class ProductSearchDelegate extends SearchDelegate<Product?> {
+  final List<Product> products;
   final String currentUserId;
-  final Function(String) onLike;
+  final Function(String) onFavorite;
 
-  ReportSearchDelegate({
-    required this.reports,
+  ProductSearchDelegate({
+    required this.products,
     required this.currentUserId,
-    required this.onLike,
+    required this.onFavorite,
   });
 
   @override
-  String get searchFieldLabel => 'Search by title, category, or location';
+  String get searchFieldLabel => 'Search by title, category, status or location';
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -604,12 +748,12 @@ class ReportSearchDelegate extends SearchDelegate<Report?> {
     }
 
     final searchQuery = query.toLowerCase();
-    final results = reports.where((report) {
-      return report.title.toLowerCase().contains(searchQuery) ||
-          report.description.toLowerCase().contains(searchQuery) ||
-          report.category.displayName.toLowerCase().contains(searchQuery) ||
-          report.locationAddress.toLowerCase().contains(searchQuery) ||
-          report.userName.toLowerCase().contains(searchQuery);
+    final results = products.where((product) {
+      return product.title.toLowerCase().contains(searchQuery) ||
+          product.description.toLowerCase().contains(searchQuery) ||
+          product.category.displayName.toLowerCase().contains(searchQuery) ||
+          product.locationAddress.toLowerCase().contains(searchQuery) ||
+          product.userName.toLowerCase().contains(searchQuery);
     }).toList();
 
     if (results.isEmpty) {
@@ -643,34 +787,34 @@ class ReportSearchDelegate extends SearchDelegate<Report?> {
       padding: const EdgeInsets.only(bottom: 16),
       itemCount: results.length,
       itemBuilder: (context, index) {
-        final report = results[index];
-        return ReportCard(
-          report: report,
+        final product = results[index];
+        return ProductCard(
+          product: product,
           currentUserId: currentUserId,
-          onLike: () => onLike(report.id!),
+          onFavorite: () => onFavorite(product.id!),
         );
       },
     );
   }
 }
 
-class ReportCard extends StatefulWidget {
-  final Report report;
+class ProductCard extends StatefulWidget {
+  final Product product;
   final String currentUserId;
-  final VoidCallback onLike;
+  final VoidCallback onFavorite;
 
-  const ReportCard({
+  const ProductCard({
     super.key,
-    required this.report,
+    required this.product,
     required this.currentUserId,
-    required this.onLike,
+    required this.onFavorite,
   });
 
   @override
-  State<ReportCard> createState() => _ReportCardState();
+  State<ProductCard> createState() => _ProductCardState();
 }
 
-class _ReportCardState extends State<ReportCard> {
+class _ProductCardState extends State<ProductCard> {
   late PageController _pageController;
   int _currentPageIndex = 0;
 
@@ -695,25 +839,25 @@ class _ReportCardState extends State<ReportCard> {
   }
 
   Color _getStatusColor(BuildContext context) {
-    switch (widget.report.status) {
-      case ReportStatus.approved:
+    switch (widget.product.status) {
+      case ProductStatus.available:
         return Colors.green;
-      case ReportStatus.inProgress:
-        return Colors.blue;
-      case ReportStatus.resolved:
+      case ProductStatus.soldOut:
         return Colors.grey;
-      case ReportStatus.pending:
+      case ProductStatus.free:
+        return Colors.blue;
+      case ProductStatus.reserved:
         return Colors.orange;
-      case ReportStatus.rejected:
-        return Colors.red;
+      case ProductStatus.onsale:
+        return Colors.red;  
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final report = widget.report;
+    final product = widget.product;
     final currentUserId = widget.currentUserId;
-    final isLiked = report.likedBy.contains(currentUserId);
+    final isFavorited = product.favoritedBy.contains(currentUserId);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -724,21 +868,21 @@ class _ReportCardState extends State<ReportCard> {
           ListTile(
             leading: CircleAvatar(
               radius: 20,
-              backgroundImage: report.userPhotoUrl != null && report.userPhotoUrl!.isNotEmpty
-                  ? NetworkImage(report.userPhotoUrl!)
+              backgroundImage: product.userPhotoUrl != null && product.userPhotoUrl!.isNotEmpty
+                  ? NetworkImage(product.userPhotoUrl!)
                   : null,
-              child: report.userPhotoUrl == null || report.userPhotoUrl!.isEmpty
+              child: product.userPhotoUrl == null || product.userPhotoUrl!.isEmpty
                   ? Text(
-                      report.userName.isNotEmpty ? report.userName[0].toUpperCase() : '?',
+                      product.userName.isNotEmpty ? product.userName[0].toUpperCase() : '?',
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     )
                   : null,
             ),
-            title: Text(report.userName),
-            subtitle: Text(timeago.format(report.createdAt)),
+            title: Text(product.userName),
+            subtitle: Text(timeago.format(product.createdAt)),
             trailing: Chip(
               label: Text(
-                report.status.displayName,
+                product.status.displayName,
                 style: const TextStyle(fontSize: 12),
               ),
               backgroundColor: _getStatusColor(context).withValues(alpha: 0.2),
@@ -748,7 +892,7 @@ class _ReportCardState extends State<ReportCard> {
           ),
 
           // Images carousel
-          if (report.photoUrls.isNotEmpty)
+          if (product.photoUrls.isNotEmpty)
             Stack(
               children: [
                 ClipRRect(
@@ -764,10 +908,10 @@ class _ReportCardState extends State<ReportCard> {
                       ),
                       child: PageView.builder(
                         controller: _pageController,
-                        itemCount: report.photoUrls.length,
+                        itemCount: product.photoUrls.length,
                         itemBuilder: (context, index) {
                           return ImageFromString(
-                            src: report.photoUrls[index],
+                            src: product.photoUrls[index],
                             fit: BoxFit.contain,
                           );
                         },
@@ -776,7 +920,7 @@ class _ReportCardState extends State<ReportCard> {
                   ),
                 ),
                 // Image counter badge
-                if (report.photoUrls.length > 1)
+                if (product.photoUrls.length > 1)
                   Positioned(
                     top: 8,
                     right: 8,
@@ -790,7 +934,7 @@ class _ReportCardState extends State<ReportCard> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '${_currentPageIndex + 1}/${report.photoUrls.length}',
+                        '${_currentPageIndex + 1}/${product.photoUrls.length}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -809,7 +953,7 @@ class _ReportCardState extends State<ReportCard> {
               children: [
                 // Title
                 Text(
-                  report.title,
+                  product.title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).brightness == Brightness.dark
@@ -818,11 +962,19 @@ class _ReportCardState extends State<ReportCard> {
                   ),
                 ),
                 const SizedBox(height: 8),
-
+                //price
+                Text(
+                  '\$${product.price.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 // Category
                 Chip(
                   label: Text(
-                    report.category.displayName,
+                    product.category.displayName,
                     style: const TextStyle(fontSize: 12),
                   ),
                   backgroundColor: Theme.of(
@@ -838,7 +990,7 @@ class _ReportCardState extends State<ReportCard> {
 
                 // Description
                 Text(
-                  report.description,
+                  product.description,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).brightness == Brightness.dark
                         ? Colors.white
@@ -848,6 +1000,7 @@ class _ReportCardState extends State<ReportCard> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
+
 
                 // Location
                 Row(
@@ -860,7 +1013,7 @@ class _ReportCardState extends State<ReportCard> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        report.locationAddress,
+                        product.locationAddress,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -877,24 +1030,25 @@ class _ReportCardState extends State<ReportCard> {
                   children: [
                     IconButton(
                       icon: Icon(
-                        isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                        isFavorited ? Icons.favorite : Icons.favorite_border,
                       ),
-                      onPressed: widget.onLike,
-                      color: isLiked
+                      onPressed: widget.onFavorite,
+                      color: isFavorited
                           ? Theme.of(context).colorScheme.primary
                           : null,
                     ),
-                    Text('${report.likes}'),
+                    Text('${product.favorites}'),
                     const SizedBox(width: 16),
                   ],
                 ),
                 const SizedBox(height: 12),
+                
                 // Admin controls
                 Consumer<AuthService>(
                   builder: (context, auth, _) {
                     final isAdmin = auth.currentAppUser?.role.isAdmin ?? false;
                     if (!isAdmin) return const SizedBox.shrink();
-                    final reportService = Provider.of<ReportService>(
+                    final productService = Provider.of<ProductService>(
                       context,
                       listen: false,
                     );
@@ -939,16 +1093,16 @@ class _ReportCardState extends State<ReportCard> {
                             context,
                             MaterialPageRoute(
                               builder: (_) =>
-                                  AddReportScreen(existingReport: report),
+                                  AddProductScreen(existingProduct: product),
                             ),
                           );
                         } else if (value == 'delete') {
                           final confirm = await showDialog<bool>(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: const Text('Delete Report'),
+                              title: const Text('Delete Product'),
                               content: const Text(
-                                'Are you sure you want to delete this report?',
+                                'Are you sure you want to delete this product?',
                               ),
                               actions: [
                                 TextButton(
@@ -968,14 +1122,14 @@ class _ReportCardState extends State<ReportCard> {
                           );
                           if (confirm == true) {
                             try {
-                              await reportService.deleteReport(
-                                report.id!,
-                                report.userId,
+                              await productService.deleteProduct(
+                                product.id!,
+                                product.userId,
                               );
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Report deleted'),
+                                    content: Text('Product deleted'),
                                   ),
                                 );
                               }
@@ -989,118 +1143,13 @@ class _ReportCardState extends State<ReportCard> {
                           }
                         }
                       },
+                      
                       itemBuilder: (context) => [
-                        // Status submenu
-                        PopupMenuItem<String>(
-                          enabled: false,
-                          child: PopupMenuButton<ReportStatus>(
-                            tooltip: 'Change Status',
-                            onSelected: (status) async {
-                              try {
-                                await reportService.updateReportStatus(
-                                  report.id!,
-                                  status,
-                                );
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Status updated'),
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Failed: $e')),
-                                  );
-                                }
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: ReportStatus.pending,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.pending,
-                                      size: 18,
-                                      color: Colors.orange,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text('Pending'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: ReportStatus.approved,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      size: 18,
-                                      color: Colors.blue,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text('Approved'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: ReportStatus.inProgress,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.hourglass_bottom,
-                                      size: 18,
-                                      color: Colors.amber,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text('In Progress'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: ReportStatus.resolved,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.done_all,
-                                      size: 18,
-                                      color: Colors.green,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text('Resolved'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: ReportStatus.rejected,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.cancel,
-                                      size: 18,
-                                      color: Colors.red,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text('Rejected'),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            child: const ListTile(
-                              leading: Icon(Icons.flag),
-                              title: Text('Change Status'),
-                              trailing: Icon(Icons.arrow_right),
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ),
                         const PopupMenuItem(
                           value: 'edit',
                           child: ListTile(
                             leading: Icon(Icons.edit),
-                            title: Text('Edit Report'),
+                            title: Text('Edit Product'),
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),
@@ -1109,7 +1158,7 @@ class _ReportCardState extends State<ReportCard> {
                           child: ListTile(
                             leading: Icon(Icons.delete, color: Colors.red),
                             title: Text(
-                              'Delete Report',
+                              'Delete Product',
                               style: TextStyle(color: Colors.red),
                             ),
                             contentPadding: EdgeInsets.zero,

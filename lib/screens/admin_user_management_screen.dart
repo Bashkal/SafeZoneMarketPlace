@@ -127,7 +127,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                         child: ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
                           itemCount: _filteredUsers.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      separatorBuilder: (_, _) => const Divider(height: 1),
                           itemBuilder: (context, index) {
                             final user = _filteredUsers[index];
                             return ListTile(

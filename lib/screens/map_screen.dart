@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import '../services/report_service.dart';
-import '../models/report_model.dart';
+import '../services/product_service.dart';
+import '../models/product_model.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -19,7 +19,7 @@ class _MapScreenState extends State<MapScreen> {
 
   late MapController _mapController;
   LatLng _currentLocation = _fallbackLocation;
-  Report? _selectedReport;
+  Product? _selectedProduct;
 
   @override
   void initState() {
@@ -27,7 +27,7 @@ class _MapScreenState extends State<MapScreen> {
     _mapController = MapController();
     _getCurrentLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ReportService>(context, listen: false).fetchReports();
+      Provider.of<ProductService>(context, listen: false).fetchProducts();
     });
   }
 
@@ -52,53 +52,59 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  Color _getMarkerColor(ReportStatus status) {
+  Color _getMarkerColor(ProductStatus status) {
+   
     switch (status) {
-      case ReportStatus.pending:
-        return Colors.orange;
-      case ReportStatus.approved:
-        return Colors.blue;
-      case ReportStatus.inProgress:
-        return Colors.amber;
-      case ReportStatus.resolved:
+      case ProductStatus.available:
         return Colors.green;
-      case ReportStatus.rejected:
+      case ProductStatus.free:
+        return Colors.blue;
+      case ProductStatus.soldOut:
+        return Colors.grey;
+      case ProductStatus.onsale:
         return Colors.red;
+      case ProductStatus.reserved:
+        return Colors.orange;  
     }
   }
 
-  IconData _getCategoryIcon(ReportCategory category) {
+  IconData _getCategoryIcon(ProductCategory category) {
     switch (category) {
-      case ReportCategory.roadHazard:
-        return Icons.warning;
-      case ReportCategory.streetlight:
-        return Icons.lightbulb;
-      case ReportCategory.graffiti:
-        return Icons.brush;
-      case ReportCategory.lostPet:
-      case ReportCategory.foundPet:
-        return Icons.pets;
-      case ReportCategory.parking:
-        return Icons.local_parking;
-      case ReportCategory.noise:
-        return Icons.volume_up;
-      case ReportCategory.waste:
-        return Icons.delete;
-      case ReportCategory.other:
-        return Icons.info;
+      case ProductCategory.electronics:
+        return Icons.electrical_services;
+      case ProductCategory.furniture:
+        return Icons.chair;
+      case ProductCategory.clothing:
+        return Icons.checkroom;
+      case ProductCategory.books:
+        return Icons.book;
+      case ProductCategory.toys:
+        return Icons.toys;
+      case ProductCategory.vehicles:
+        return Icons.directions_car;
+      case ProductCategory.homegarden:
+        return Icons.yard;
+      case ProductCategory.other:
+        return Icons.category;
+      case ProductCategory.sports:
+        return Icons.sports_soccer;
+      case ProductCategory.healthbeauty:
+        return Icons.spa;
+      case ProductCategory.toolsandequipment:
+        return Icons.build;    
     }
   }
 
   void _openSearch() {
-    final reportService = Provider.of<ReportService>(context, listen: false);
+    final productService = Provider.of<ProductService>(context, listen: false);
     showSearch(
       context: context,
       delegate: MapSearchDelegate(
-        reports: reportService.reports,
-        onReportSelected: (report) {
+        products: productService.products,
+        onProductSelected: (product) {
           setState(() {
-            _selectedReport = report;
-            _mapController.move(report.location, _defaultZoom);
+            _selectedProduct = product;
+            _mapController.move(product.location, _defaultZoom);
           });
         },
       ),
@@ -107,7 +113,7 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final reportService = Provider.of<ReportService>(context);
+    final productService = Provider.of<ProductService>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -116,9 +122,9 @@ class _MapScreenState extends State<MapScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              Provider.of<ReportService>(context, listen: false).fetchReports();
+              Provider.of<ProductService>(context, listen: false).fetchProducts();
             },
-            tooltip: 'Refresh reports',
+            tooltip: 'Refresh products',
           ),
           IconButton(
             icon: const Icon(Icons.my_location),
@@ -129,7 +135,7 @@ class _MapScreenState extends State<MapScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: _openSearch,
-            tooltip: 'Search reports',
+            tooltip: 'Search products',
           ),
         ],
       ),
@@ -146,7 +152,7 @@ class _MapScreenState extends State<MapScreen> {
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.safezone',
+                userAgentPackageName: 'com.example.safezonemarketplace',
               ),
               MarkerLayer(
                 markers: [
@@ -167,21 +173,21 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                     ),
                   ),
-                  // Report markers
-                  ...reportService.reports.map((report) {
+                  // Product markers
+                  ...productService.products.map((product) {
                     return Marker(
-                      point: report.location,
+                      point: product.location,
                       width: 40,
                       height: 40,
                       child: GestureDetector(
                         onTap: () {
                           setState(() {
-                            _selectedReport = report;
+                            _selectedProduct = product;
                           });
                         },
                         child: Icon(
-                          _getCategoryIcon(report.category),
-                          color: _getMarkerColor(report.status),
+                          _getCategoryIcon(product.category),
+                          color: _getMarkerColor(product.status),
                           size: 32,
                           shadows: const [
                             Shadow(blurRadius: 4, color: Colors.black45),
@@ -195,8 +201,8 @@ class _MapScreenState extends State<MapScreen> {
             ],
           ),
 
-          // Report details card
-          if (_selectedReport != null)
+          // Product details card
+          if (_selectedProduct != null)
             Positioned(
               bottom: 0,
               left: 0,
@@ -216,31 +222,61 @@ class _MapScreenState extends State<MapScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              _selectedReport!.title,
+                              _selectedProduct!.title,
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
+                          ),
+                          //Price
+                          Text(
+                            '\$${_selectedProduct!.price.toStringAsFixed(2)}',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close),
                             onPressed: () {
                               setState(() {
-                                _selectedReport = null;
+                                _selectedProduct = null;
                               });
                             },
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Chip(
-                        label: Text(_selectedReport!.category.displayName),
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.primaryContainer,
+                      Row(
+                        children: [
+                          Chip(
+                            label: Text(_selectedProduct!.category.displayName),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
+                          ),
+                          const SizedBox(width: 4,),
+                          Chip(
+                            label: Text(_selectedProduct!.status.displayName),
+                            backgroundColor: _getMarkerColor(
+                              _selectedProduct!.status,
+                            ).withValues(alpha: 0.2),
+                            labelStyle: TextStyle(
+                              color: _getMarkerColor(_selectedProduct!.status),
+                            ),
+                          ),
+                          const SizedBox(width: 4,),
+                          Chip(
+                            label: Text(_selectedProduct!.condition.displayName),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.secondaryContainer,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        _selectedReport!.description,
+                        _selectedProduct!.description,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -257,7 +293,7 @@ class _MapScreenState extends State<MapScreen> {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              _selectedReport!.locationAddress,
+                              _selectedProduct!.locationAddress,
                               style: Theme.of(context).textTheme.bodySmall,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -266,27 +302,17 @@ class _MapScreenState extends State<MapScreen> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Chip(
-                        label: Text(_selectedReport!.status.displayName),
-                        backgroundColor: _getMarkerColor(
-                          _selectedReport!.status,
-                        ).withValues(alpha: 0.2),
-                        labelStyle: TextStyle(
-                          color: _getMarkerColor(_selectedReport!.status),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                       FilledButton(
                         onPressed: () {
-                          final id = _selectedReport!.id;
+                          final id = _selectedProduct!.id;
                           if (id == null || id.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Unable to open report: missing ID')),
+                              const SnackBar(content: Text('Unable to open product: missing ID')),
                             );
                             return;
                           }
                           Navigator.of(context).pushNamed(
-                            '/report',
+                            '/product',
                             arguments: id,
                           );
                         },
@@ -311,9 +337,27 @@ class _MapScreenState extends State<MapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _LegendItem(color: Colors.orange, label: 'Pending'),
-                    _LegendItem(color: Colors.amber, label: 'In Progress'),
-                    _LegendItem(color: Colors.green, label: 'Resolved'),
+                    const _LegendItem(
+                      color: Colors.green,
+                      label: 'Available',
+                    ),
+                    const _LegendItem(
+                      color: Colors.blue,
+                      label: 'Free',
+                    ),
+                    const _LegendItem(
+                      color: Colors.red,
+                      label: 'On Sale',
+                    ),
+                    const _LegendItem(
+                      color: Colors.orange,
+                      label: 'Reserved',
+                    ),
+                    const _LegendItem(
+                      color: Colors.grey,
+                      label: 'Sold Out',
+                    ),
+                    
                   ],
                 ),
               ),
@@ -352,14 +396,14 @@ class _LegendItem extends StatelessWidget {
 }
 
 // Search Delegate for map screen
-class MapSearchDelegate extends SearchDelegate<Report?> {
-  final List<Report> reports;
-  final Function(Report) onReportSelected;
+class MapSearchDelegate extends SearchDelegate<Product?> {
+  final List<Product> products;
+  final Function(Product) onProductSelected;
 
-  MapSearchDelegate({required this.reports, required this.onReportSelected});
+  MapSearchDelegate({required this.products, required this.onProductSelected});
 
   @override
-  String get searchFieldLabel => 'Search reports on map';
+  String get searchFieldLabel => 'Search products on map';
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -393,18 +437,19 @@ class MapSearchDelegate extends SearchDelegate<Report?> {
     return _buildSearchResults(context);
   }
 
-  Color _getStatusColor(ReportStatus status) {
+  Color _getStatusColor(ProductStatus status) {
     switch (status) {
-      case ReportStatus.pending:
-        return Colors.orange;
-      case ReportStatus.approved:
-        return Colors.blue;
-      case ReportStatus.inProgress:
-        return Colors.amber;
-      case ReportStatus.resolved:
+      case ProductStatus.available:
         return Colors.green;
-      case ReportStatus.rejected:
+      case ProductStatus.free:
+        return Colors.blue;
+      case ProductStatus.soldOut:
+        return Colors.grey;
+      case ProductStatus.onsale:
         return Colors.red;
+      case ProductStatus.reserved:
+        return Colors.orange;
+      
     }
   }
 
@@ -421,12 +466,12 @@ class MapSearchDelegate extends SearchDelegate<Report?> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Search reports',
+              'Search products',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              'Find reports by title, category, or location',
+              'Find products by title, category, or location',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -438,11 +483,11 @@ class MapSearchDelegate extends SearchDelegate<Report?> {
     }
 
     final searchQuery = query.toLowerCase();
-    final results = reports.where((report) {
-      return report.title.toLowerCase().contains(searchQuery) ||
-          report.description.toLowerCase().contains(searchQuery) ||
-          report.category.displayName.toLowerCase().contains(searchQuery) ||
-          report.locationAddress.toLowerCase().contains(searchQuery);
+    final results = products.where((product) {
+      return product.title.toLowerCase().contains(searchQuery) ||
+          product.description.toLowerCase().contains(searchQuery) ||
+          product.category.displayName.toLowerCase().contains(searchQuery) ||
+          product.locationAddress.toLowerCase().contains(searchQuery);
     }).toList();
 
     if (results.isEmpty) {
@@ -475,17 +520,17 @@ class MapSearchDelegate extends SearchDelegate<Report?> {
     return ListView.builder(
       itemCount: results.length,
       itemBuilder: (context, index) {
-        final report = results[index];
+        final product = results[index];
         return ListTile(
           leading: CircleAvatar(
-            backgroundColor: _getStatusColor(report.status).withValues(alpha: 0.2),
+            backgroundColor: _getStatusColor(product.status).withValues(alpha: 0.2),
             child: Icon(
               Icons.location_on,
-              color: _getStatusColor(report.status),
+              color: _getStatusColor(product.status),
             ),
           ),
           title: Text(
-            report.title,
+            product.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -493,14 +538,19 @@ class MapSearchDelegate extends SearchDelegate<Report?> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                report.category.displayName,
+                product.category.displayName,
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
+              //Price
               Text(
-                report.locationAddress,
+                '\$${product.price.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                product.locationAddress,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12),
@@ -509,17 +559,17 @@ class MapSearchDelegate extends SearchDelegate<Report?> {
           ),
           trailing: Chip(
             label: Text(
-              report.status.displayName,
+              product.status.displayName,
               style: const TextStyle(fontSize: 11),
             ),
-            backgroundColor: _getStatusColor(report.status).withValues(alpha: 0.2),
-            labelStyle: TextStyle(color: _getStatusColor(report.status)),
+            backgroundColor: _getStatusColor(product.status).withValues(alpha: 0.2),
+            labelStyle: TextStyle(color: _getStatusColor(product.status)),
             padding: const EdgeInsets.symmetric(horizontal: 8),
             visualDensity: VisualDensity.compact,
           ),
           onTap: () {
-            onReportSelected(report);
-            close(context, report);
+            onProductSelected(product);
+            close(context, product);
           },
         );
       },

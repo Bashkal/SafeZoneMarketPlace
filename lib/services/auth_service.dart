@@ -137,7 +137,7 @@ class AuthService extends ChangeNotifier {
           displayName: u.displayName ?? 'Anonymous',
           photoUrl: u.photoURL,
           createdAt: u.metadata.creationTime ?? DateTime.now(),
-          reportsSubmitted: rtdbCount,
+          productsSubmitted: rtdbCount,
           role: role,
         );
         return;
@@ -234,7 +234,7 @@ class AuthService extends ChangeNotifier {
         displayName: user.displayName ?? 'Anonymous',
         photoUrl: user.photoURL,
         createdAt: DateTime.now(),
-        reportsSubmitted: 0,
+        productsSubmitted: 0,
         role: UserRole.user,
       );
       await userDoc.set(appUser.toMap());

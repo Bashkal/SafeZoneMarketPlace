@@ -3,37 +3,78 @@ import 'package:flutter/gestures.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:provider/provider.dart';
-import '../models/report_model.dart';
-import '../services/report_service.dart';
+import '../models/product_model.dart';
+import '../services/product_service.dart';
 import '../widgets/image_from_string.dart';
 import '../services/auth_service.dart';
 
 
-class ReportDetailScreen extends StatelessWidget {
-  final String reportId;
-  const ReportDetailScreen({super.key, required this.reportId});
+class ProductDetailScreen extends StatelessWidget {
+  final String productId;
+  const ProductDetailScreen({super.key, required this.productId});
+  
+IconData _getCategoryIcon(ProductCategory category) {
+    switch (category) {
+      case ProductCategory.electronics:
+        return Icons.electrical_services;
+      case ProductCategory.furniture:
+        return Icons.chair;
+      case ProductCategory.clothing:
+        return Icons.checkroom;
+      case ProductCategory.books:
+        return Icons.book;
+      case ProductCategory.toys:
+        return Icons.toys;
+      case ProductCategory.vehicles:
+        return Icons.directions_car;
+      case ProductCategory.homegarden:
+        return Icons.yard;
+      case ProductCategory.other:
+        return Icons.category;
+      case ProductCategory.sports:
+        return Icons.sports_soccer;
+      case ProductCategory.healthbeauty:
+        return Icons.spa;
+      case ProductCategory.toolsandequipment:
+        return Icons.build;    
+    }
+  }
 
-  Color _getStatusColor(ReportStatus status) {
+  Color _getStatusColor(ProductStatus status) {
     switch (status) {
-      case ReportStatus.pending:
-        return Colors.orange;
-      case ReportStatus.approved:
-        return Colors.blue;
-      case ReportStatus.inProgress:
-        return Colors.amber;
-      case ReportStatus.resolved:
+      case ProductStatus.available:
         return Colors.green;
-      case ReportStatus.rejected:
+      case ProductStatus.free:
+        return Colors.blue;
+      case ProductStatus.soldOut:
+        return Colors.grey;
+      case ProductStatus.reserved:
+        return Colors.orange;
+      case ProductStatus.onsale:
+        return Colors.red;
+    }
+  }
+  Color _getConditionColor(ProductCondition condition) {
+    switch (condition) {
+      case ProductCondition.newCondition:
+        return Colors.green;
+      case ProductCondition.likeNew:
+        return Colors.lightGreen;
+      case ProductCondition.good:
+        return Colors.yellow;
+      case ProductCondition.fair:
+        return Colors.orange;
+      case ProductCondition.poor:
         return Colors.red;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ref = FirebaseDatabase.instance.ref('reports/$reportId');
+    final ref = FirebaseDatabase.instance.ref('products/$productId');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Report Details')),
+      appBar: AppBar(title: const Text('Product Details')),
       body: StreamBuilder<DatabaseEvent>(
         stream: ref.onValue,
         builder: (context, snapshot) {
@@ -46,14 +87,14 @@ class ReportDetailScreen extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text('Report not found (ID: $reportId)', textAlign: TextAlign.center),
+                child: Text('Product not found (ID: $productId)', textAlign: TextAlign.center),
               ),
             );
           }
 
           if (data is Map) {
             final map = Map<String, dynamic>.from(data);
-            final report = Report.fromMap(reportId, map);
+            final product = Product.fromMap(productId, map);
 
             return Center(
               child: ConstrainedBox(
@@ -67,8 +108,8 @@ class ReportDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (report.photoUrls.isNotEmpty)
-                        _DetailImageCarousel(photoUrls: report.photoUrls),
+                      if (product.photoUrls.isNotEmpty)
+                        _DetailImageCarousel(photoUrls: product.photoUrls),
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -79,12 +120,12 @@ class ReportDetailScreen extends StatelessWidget {
                               children: [
                                 CircleAvatar(
                                   radius: 20,
-                                  backgroundImage: report.userPhotoUrl != null && report.userPhotoUrl!.isNotEmpty
-                                      ? NetworkImage(report.userPhotoUrl!)
+                                  backgroundImage: product.userPhotoUrl != null && product.userPhotoUrl!.isNotEmpty
+                                      ? NetworkImage(product.userPhotoUrl!)
                                       : null,
-                                  child: report.userPhotoUrl == null || report.userPhotoUrl!.isEmpty
+                                  child: product.userPhotoUrl == null || product.userPhotoUrl!.isEmpty
                                       ? Text(
-                                          report.userName.isNotEmpty ? report.userName[0].toUpperCase() : '?',
+                                          product.userName.isNotEmpty ? product.userName[0].toUpperCase() : '?',
                                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                         )
                                       : null,
@@ -95,13 +136,13 @@ class ReportDetailScreen extends StatelessWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        report.userName.isNotEmpty ? report.userName : 'Anonymous',
+                                        product.userName.isNotEmpty ? product.userName : 'Anonymous',
                                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                               fontWeight: FontWeight.w600,
                                             ),
                                       ),
                                       Text(
-                                        timeago.format(report.createdAt),
+                                        timeago.format(product.createdAt),
                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                                             ),
@@ -114,28 +155,47 @@ class ReportDetailScreen extends StatelessWidget {
                             const SizedBox(height: 12),
 
                             // Title
-                            Text(
-                              report.title,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                            Row(
+                              children: [
+                                Text(
+                                  product.title,
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                                
+                                const Spacer(),
+                                // Price
+                                Text(
+                                  product.price > 0 ? '\$${product.price.toStringAsFixed(2)}' : 'Free',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-
                             // Category and Status chips
                             Wrap(
                               spacing: 8,
                               runSpacing: 8,
                               children: [
                                 Chip(
-                                  label: Text(report.category.displayName),
+                                  avatar: Icon(_getCategoryIcon(product.category), size: 16, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                  label: Text(product.category.displayName),
                                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                                   visualDensity: VisualDensity.compact,
                                 ),
                                 Chip(
-                                  label: Text(report.status.displayName),
-                                  backgroundColor: _getStatusColor(report.status).withValues(alpha: 0.2),
-                                  labelStyle: TextStyle(color: _getStatusColor(report.status)),
+                                  label: Text(product.status.displayName),
+                                  backgroundColor: _getStatusColor(product.status).withValues(alpha: 0.2),
+                                  labelStyle: TextStyle(color: _getStatusColor(product.status)),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                Chip(
+                                  label: Text(product.condition.displayName),
+                                  backgroundColor: _getConditionColor(product.condition).withValues(alpha: 0.2),
+                                  labelStyle: TextStyle(color: _getConditionColor(product.condition)),
                                   visualDensity: VisualDensity.compact,
                                 ),
                               ],
@@ -144,7 +204,7 @@ class ReportDetailScreen extends StatelessWidget {
 
                             // Description
                             Text(
-                              report.description,
+                              product.description,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: Theme.of(context).colorScheme.onSurface,
                                   ),
@@ -158,7 +218,7 @@ class ReportDetailScreen extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
-                                    report.locationAddress,
+                                    product.locationAddress,
                                     style: Theme.of(context).textTheme.bodySmall,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
@@ -177,7 +237,7 @@ class ReportDetailScreen extends StatelessWidget {
                 Builder(builder: (context) {
                   final auth = Provider.of<AuthService>(context, listen: false);
                   final currentUserId = auth.currentUser?.uid;
-                  final isLiked = currentUserId != null && report.likedBy.contains(currentUserId);
+                  final isFavorited = currentUserId != null && product.favoritedBy.contains(currentUserId);
                   return Row(
                     children: [
                       Expanded(
@@ -185,20 +245,21 @@ class ReportDetailScreen extends StatelessWidget {
                           onPressed: () async {
                             if (currentUserId == null) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Please sign in to like reports')),
+                                const SnackBar(content: Text('Please sign in to favorite products')),
                               );
                               return;
                             }
                             try {
-                              await Provider.of<ReportService>(context, listen: false)
-                                  .toggleLike(reportId, currentUserId);
+                              await Provider.of<ProductService>(context, listen: false)
+                                  .toggleFavorite(productId, currentUserId);
                             } catch (e) {
+                              // ignore: use_build_context_synchronously
                               ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(content: Text('Failed to like: $e')));
+                                  .showSnackBar(SnackBar(content: Text('Failed to favorite: $e')));
                             }
                           },
-                          icon: Icon(isLiked ? Icons.thumb_up : Icons.thumb_up_outlined),
-                          label: Text(isLiked ? 'Liked (${report.likes})' : 'Like (${report.likes})'),
+                          icon: Icon(isFavorited ? Icons.favorite : Icons.favorite_border),
+                          label: Text(isFavorited ? 'Favorited (${product.favorites})' : 'Favorite (${product.favorites})'),
                         ),
                       ),
                     ],
@@ -210,7 +271,7 @@ class ReportDetailScreen extends StatelessWidget {
         );
           }
 
-          return const Center(child: Text('Unsupported report format'));
+          return const Center(child: Text('Unsupported product format'));
         },
       ),
     );

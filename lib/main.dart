@@ -7,14 +7,14 @@ import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
-import 'services/report_service.dart';
+import 'services/product_service.dart';
 import 'services/notification_service.dart';
 import 'providers/theme_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'config/web_push_config.dart';
 import 'navigation/app_navigator.dart';
-import 'screens/report_detail_screen.dart';
+import 'screens/product_detail_screen.dart';
 // No direct model imports needed for token/subscribe handling
 
 @pragma('vm:entry-point')
@@ -177,22 +177,22 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthService()),
-        ChangeNotifierProvider(create: (_) => ReportService()),
+        ChangeNotifierProvider(create: (_) => ProductService()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
             navigatorKey: AppNavigator.navigatorKey,
-            title: 'SafeZone',
+            title: 'SafeZone Marketplace',
             debugShowCheckedModeBanner: false,
             theme: ThemeProvider.lightTheme,
             darkTheme: ThemeProvider.darkTheme,
             themeMode: themeProvider.themeMode,
             routes: {
-              '/report': (context) {
+              '/product': (context) {
                 final args = ModalRoute.of(context)!.settings.arguments;
-                final reportId = args is String ? args : args.toString();
-                return ReportDetailScreen(reportId: reportId);
+                final productId = args is String ? args : args.toString();
+                return ProductDetailScreen(productId: productId);
               },
             },
             home: const AuthWrapper(),

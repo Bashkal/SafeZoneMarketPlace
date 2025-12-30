@@ -220,7 +220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '${appUser?.reportsSubmitted ?? 0} Reports Submitted',
+                          '${appUser?.productsSubmitted ?? 0} Products Submitted',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(
                                 color: Theme.of(context).colorScheme.primary,

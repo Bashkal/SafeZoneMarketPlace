@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
-import '../models/report_model.dart';
+import '../models/product_model.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -15,7 +15,7 @@ class NotificationSettingsScreen extends StatefulWidget {
 }
 
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
-  late Map<ReportCategory, bool> _categorySelections;
+  late Map<ProductCategory, bool> _categorySelections;
   bool _isSaving = false;
 
   static const String _prefsKey = 'notification_categories';
@@ -23,7 +23,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   @override
   void initState() {
     super.initState();
-    _categorySelections = {for (final c in ReportCategory.values) c: true};
+    _categorySelections = {for (final c in ProductCategory.values) c: true};
     _loadPrefs();
   }
 
@@ -62,7 +62,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             padding: const EdgeInsets.all(16),
             children: [
               Text(
-                'Choose which report categories you want to receive notifications for.',
+                'Choose which product categories you want to receive notifications for.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -94,7 +94,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   ),
                 ),
               const SizedBox(height: 16),
-              ...ReportCategory.values.map((category) {
+              ...ProductCategory.values.map((category) {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: SwitchListTile(
@@ -149,26 +149,30 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  String _getSubtitle(ReportCategory category) {
+  String _getSubtitle(ProductCategory category) {
     switch (category) {
-      case ReportCategory.roadHazard:
-        return 'Dangerous road conditions';
-      case ReportCategory.streetlight:
-        return 'Broken or dark streetlights';
-      case ReportCategory.graffiti:
-        return 'Vandalism and graffiti';
-      case ReportCategory.lostPet:
-        return 'Missing pets in your area';
-      case ReportCategory.foundPet:
-        return 'Found pets nearby';
-      case ReportCategory.parking:
-        return 'Parking violations';
-      case ReportCategory.noise:
-        return 'Noise complaints';
-      case ReportCategory.waste:
-        return 'Trash and waste issues';
-      case ReportCategory.other:
-        return 'General community issues';
+      case ProductCategory.electronics:
+        return 'Notifications for electronics products';
+      case ProductCategory.furniture:
+        return 'Notifications for furniture products';
+      case ProductCategory.clothing:
+        return 'Notifications for clothing products';
+      case ProductCategory.books:
+        return 'Notifications for books';
+      case ProductCategory.toys:
+        return 'Notifications for toys and games';
+      case ProductCategory.vehicles:
+        return 'Notifications for vehicles';
+      case ProductCategory.healthbeauty:
+        return 'Notifications for health and beauty products';  
+      case ProductCategory.homegarden:
+        return 'Notifications for home and garden products';
+      case ProductCategory.sports:
+        return 'Notifications for sports equipment';
+      case ProductCategory.toolsandequipment:
+        return 'Notifications for tools and equipment';  
+      case ProductCategory.other:
+        return 'Notifications for other product categories';
     }
   }
 
@@ -180,9 +184,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
       setState(() {
         for (final entry in decoded.entries) {
-          final category = ReportCategory.values.firstWhere(
+          final category = ProductCategory.values.firstWhere(
             (c) => c.name == entry.key,
-            orElse: () => ReportCategory.other,
+            orElse: () => ProductCategory.other,
           );
           _categorySelections[category] = entry.value as bool? ?? true;
         }
@@ -262,28 +266,33 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     }
   }
 
-  String _topicFor(ReportCategory category) => 'category_${category.name}';
+  String _topicFor(ProductCategory category) => 'category_${category.name}';
+  IconData _iconFor(ProductCategory category) {
+    switch (category) { 
+      case ProductCategory.electronics:
+        return Icons.electrical_services;
+      case ProductCategory.furniture:
+        return Icons.chair;
+      case ProductCategory.clothing:
+        return Icons.checkroom;
+      case ProductCategory.books:
+        return Icons.book;
+      case ProductCategory.toys:
+        return Icons.toys;
+      case ProductCategory.vehicles:
+        return Icons.directions_car;
+      case ProductCategory.healthbeauty:
+        return Icons.health_and_safety;  
+      case ProductCategory.homegarden:
+        return Icons.grass;
+      case ProductCategory.sports:
+        return Icons.sports_soccer;
+      case ProductCategory.toolsandequipment:
+        return Icons.build;  
+      case ProductCategory.other:
+        return Icons.category;
 
-  IconData _iconFor(ReportCategory category) {
-    switch (category) {
-      case ReportCategory.roadHazard:
-        return Icons.warning_amber_rounded;
-      case ReportCategory.streetlight:
-        return Icons.lightbulb_outline;
-      case ReportCategory.graffiti:
-        return Icons.brush;
-      case ReportCategory.lostPet:
-        return Icons.pets;
-      case ReportCategory.foundPet:
-        return Icons.search;
-      case ReportCategory.parking:
-        return Icons.local_parking;
-      case ReportCategory.noise:
-        return Icons.volume_up;
-      case ReportCategory.waste:
-        return Icons.delete_outline;
-      case ReportCategory.other:
-        return Icons.info_outline;
+ 
     }
   }
 }

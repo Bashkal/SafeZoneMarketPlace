@@ -46,11 +46,11 @@ class NotificationService {
     try {
       final data = jsonDecode(payload);
       if (data is Map) {
-        final reportId = (data['reportId'] ?? data['id'] ?? data['report_id'])?.toString();
-        if (reportId != null && reportId.isNotEmpty) {
+        final productId = (data['productId'] ?? data['id'] ?? data['report_id'])?.toString();
+        if (productId != null && productId.isNotEmpty) {
           AppNavigator.navigatorKey.currentState?.pushNamed(
-            '/report',
-            arguments: reportId,
+            '/product',
+            arguments: productId,
           );
           return;
         }
@@ -64,11 +64,11 @@ class NotificationService {
     final notification = message.notification;
     if (notification == null) return;
 
-    // Don't show notification if current user created this report
+    // Don't show notification if current user created this product
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    final reportUserId = message.data['userId'];
-    if (currentUserId != null && reportUserId == currentUserId) {
-      return; // Skip notification for own reports
+    final productUserId = message.data['userId'];
+    if (currentUserId != null && productUserId == currentUserId) {
+      return; // Skip notification for own products
     }
 
     await _fln.show(

@@ -14,7 +14,7 @@ class AppUser {
   final String displayName;
   final String? photoUrl;
   final DateTime createdAt;
-  final int reportsSubmitted;
+  final int productsSubmitted;
   final UserRole role;
 
   const AppUser({
@@ -23,7 +23,7 @@ class AppUser {
     required this.displayName,
     this.photoUrl,
     required this.createdAt,
-    this.reportsSubmitted = 0,
+    this.productsSubmitted = 0,
     this.role = UserRole.user,
   });
 
@@ -34,7 +34,7 @@ class AppUser {
       'displayName': displayName,
       if (photoUrl != null) 'photoUrl': photoUrl,
       'createdAt': createdAt.toIso8601String(),
-      'reportsSubmitted': reportsSubmitted,
+      'productsSubmitted': productsSubmitted,
       'role': role.name,
     };
   }
@@ -50,7 +50,7 @@ class AppUser {
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'] as String)
           : DateTime.now(),
-      reportsSubmitted: (map['reportsSubmitted'] as num?)?.toInt() ?? 0,
+      productsSubmitted: (map['productsSubmitted'] as num?)?.toInt() ?? 0,
       role: roleName != null
           ? UserRole.values.firstWhere(
               (e) => e.name == roleName,
@@ -75,7 +75,7 @@ class AppUser {
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
-      reportsSubmitted: reportsSubmitted ?? this.reportsSubmitted,
+      productsSubmitted: productsSubmitted ?? this.productsSubmitted,
       role: role ?? this.role,
     );
   }

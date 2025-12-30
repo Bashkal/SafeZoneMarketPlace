@@ -2,19 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
-import '../models/report_model.dart';
+import '../models/product_model.dart';
 import '../utils/image_utils.dart';
 
-class ReportService extends ChangeNotifier {
-  static const String _reportsPath = 'reports';
+class ProductService extends ChangeNotifier {
+  static const String _productsPath = 'products';
   static const String _usersPath = 'users';
-  static const String _reportsSubmittedKey = 'reportsSubmitted';
+  static const String _productsSubmittedKey = 'productsSubmitted';
 
   final FirebaseDatabase _database = FirebaseDatabase.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  List<Report> _reports = [];
-  List<Report> get reports => _reports;
+  List<Product> _products = [];
+  List<Product> get products => _products;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -24,67 +24,67 @@ class ReportService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Fetch all reports
-  Future<void> fetchReports() async {
+  // Fetch all products
+  Future<void> fetchProducts() async {
     try {
       _setLoading(true);
 
-      final snap = await _database.ref().child(_reportsPath).get();
+      final snap = await _database.ref().child(_productsPath).get();
 
       if (!snap.exists || snap.value == null) {
-        _reports = [];
+        _products = [];
       } else {
         final data = snap.value as Map<dynamic, dynamic>;
-        final list = <Report>[];
+        final list = <Product>[];
         data.forEach((key, value) {
           try {
             final map = Map<String, dynamic>.from(value as Map);
-            list.add(Report.fromMap(key.toString(), map));
+            list.add(Product.fromMap(key.toString(), map));
           } catch (e) {
-            if (kDebugMode) print('Error parsing report entry: $e');
+            if (kDebugMode) print('Error parsing product entry: $e');
           }
         });
 
         // Sort by createdAt descending
         list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        _reports = list;
+        _products = list;
       }
 
       _setLoading(false);
     } catch (e) {
       _setLoading(false);
       if (kDebugMode) {
-        print('Error fetching reports: $e');
+        print('Error fetching products: $e');
       }
       rethrow;
     }
   }
 
-  // Fetch user's reports
-  Future<List<Report>> fetchUserReports(String userId) async {
+  // Fetch user's products
+  Future<List<Product>> fetchUserProducts(String userId) async {
     try {
-      final snap = await _database.ref().child(_reportsPath).get();
-      final reports = <Report>[];
-      if (!snap.exists || snap.value == null) return reports;
+      final snap = await _database.ref().child(_productsPath).get();
+      final products = <Product>[];
+      if (!snap.exists || snap.value == null) return products;
 
       final data = snap.value as Map<dynamic, dynamic>;
       data.forEach((key, value) {
         try {
           final map = Map<String, dynamic>.from(value as Map);
           if (map['userId'] == userId) {
-            reports.add(Report.fromMap(key.toString(), map));
+            products.add(Product.fromMap(key.toString(), map));
           }
         } catch (e) {
-          if (kDebugMode) print('Error parsing report entry: $e');
+          if (kDebugMode) print('Error parsing product entry: $e');
         }
       });
 
       // Sort by createdAt manually
-      reports.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return reports;
+      products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return products;
     } catch (e) {
       if (kDebugMode) {
-        print('Error fetching user reports: $e');
+        print('Error fetching user products: $e');
       }
       rethrow;
     }
@@ -119,19 +119,17 @@ class ReportService extends ChangeNotifier {
     return imageBase64;
   }
 
-  // Create a new report
-  Future<void> createReport(Report report, List<File> images) async {
+  // Create a new product
+  Future<void> createProduct(Product product, List<File> images) async {
     try {
-      // Create a new report node to get a key
-      final ref = _database.ref().child(_reportsPath).push();
-
+      // Create a new product node to get a key
+      final ref = _database.ref().child(_productsPath).push();
       // Prepare base map and set it (photoUrls may be empty for now)
-      final map = report.toMap();
+      final map = product.toMap();
       await ref.set(map);
 
-      // Update user's report count first (before heavy image processing)
-      await _updateUserReportCount(report.userId, 1);
-
+      // Update user's product count first (before heavy image processing)
+      await _updateUserProductCount(product.userId, 1);
       // Upload images in background if any (don't block the UI return)
       if (images.isNotEmpty) {
         uploadImagesAsBase64(images).then((imageBase64) {
@@ -145,33 +143,36 @@ class ReportService extends ChangeNotifier {
         });
       }
 
-      // Refresh reports in background (don't block the UI)
-      fetchReports();
+      // Refresh products in background (don't block the UI)
+      fetchProducts();
     } catch (e) {
       if (kDebugMode) {
-        print('Error creating report: $e');
+        print('Error creating product: $e');
       }
       rethrow;
     }
   }
 
-  // Update a report
-  Future<void> updateReport(
-    String reportId,
-    Report report,
+  // Update a product
+  Future<void> updateProduct(
+    String productId,
+    Product product,
     List<File>? newImages, {
     List<String>? removedPhotoUrls,
   }) async {
     try {
-      final ref = _database.ref().child(_reportsPath).child(reportId);
+      final ref = _database.ref().child(_productsPath).child(productId);
 
       Map<String, Object?> updateData = {
-        'title': report.title,
-        'description': report.description,
-        'category': report.category.name,
-        'locationAddress': report.locationAddress,
-        'latitude': report.location.latitude,
-        'longitude': report.location.longitude,
+        'title': product.title,
+        'description': product.description,
+        'category': product.category.name,
+        'price': product.price,
+        'condition': product.condition.name,
+        'status': product.status.name,
+        'locationAddress': product.locationAddress,
+        'latitude': product.location.latitude,
+        'longitude': product.location.longitude,
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
@@ -199,109 +200,109 @@ class ReportService extends ChangeNotifier {
       updateData['photoUrls'] = existing;
 
       await ref.update(updateData);
-      await fetchReports();
+      await fetchProducts();
     } catch (e) {
       if (kDebugMode) {
-        print('Error updating report: $e');
+        print('Error updating product: $e');
       }
       rethrow;
     }
   }
 
   // Delete a report
-  Future<void> deleteReport(String reportId, String userId) async {
+  Future<void> deleteProduct(String productId, String userId) async {
     try {
-      final ref = _database.ref().child(_reportsPath).child(reportId);
+      final ref = _database.ref().child(_productsPath).child(productId);
       await ref.remove();
 
-      await _updateUserReportCount(userId, -1);
+      await _updateUserProductCount(userId, -1);
 
-      await fetchReports();
+      await fetchProducts();
     } catch (e) {
       if (kDebugMode) {
-        print('Error deleting report: $e');
+        print('Error deleting product: $e');
       }
       rethrow;
     }
   }
 
-  // Toggle like on a report
-  Future<void> toggleLike(String reportId, String userId) async {
+  // Toggle favorite on a product
+  Future<void> toggleFavorite(String productId, String userId) async {
     try {
-      final ref = _database.ref().child(_reportsPath).child(reportId);
+      final ref = _database.ref().child(_productsPath).child(productId);
       final snap = await ref.get();
       if (!snap.exists) return;
 
       final data = snap.value as Map<dynamic, dynamic>;
-      final likedBy = List<String>.from(data['likedBy'] ?? []);
-      int likes = data['likes'] is int
-          ? data['likes'] as int
-          : (int.tryParse('${data['likes']}') ?? 0);
+      final favoritedBy = List<String>.from(data['favoritedBy'] ?? []);
+      int favorites = data['favorites'] is int
+          ? data['favorites'] as int
+          : (int.tryParse('${data['favorites']}') ?? 0);
 
-      if (likedBy.contains(userId)) {
-        // Unlike
-        likedBy.remove(userId);
-        likes = likes - 1 < 0 ? 0 : likes - 1;
+      if (favoritedBy.contains(userId)) {
+        // Unfavorite
+        favoritedBy.remove(userId);
+        favorites = favorites - 1 < 0 ? 0 : favorites - 1;
       } else {
-        likedBy.add(userId);
-        likes = likes + 1;
+        favoritedBy.add(userId);
+        favorites = favorites + 1;
       }
 
-      await ref.update({'likes': likes, 'likedBy': likedBy});
+      await ref.update({'favorites': favorites, 'favoritedBy': favoritedBy});
 
-      await fetchReports();
+      await fetchProducts();
     } catch (e) {
       if (kDebugMode) {
-        print('Error toggling like: $e');
+        print('Error toggling favorite: $e');
       }
       rethrow;
     }
   }
 
-  // Update report status (admin function)
-  Future<void> updateReportStatus(String reportId, ReportStatus status) async {
+  // Update product status (admin function)
+  Future<void> updateProductStatus(String productId, ProductStatus status) async {
     try {
-      final ref = _database.ref().child(_reportsPath).child(reportId);
+      final ref = _database.ref().child(_productsPath).child(productId);
       await ref.update({
         'status': status.name,
         'updatedAt': DateTime.now().toIso8601String(),
       });
-      await fetchReports();
+      await fetchProducts();
     } catch (e) {
       if (kDebugMode) {
-        print('Error updating report status: $e');
+        print('Error updating product status: $e');
       }
       rethrow;
     }
   }
 
-  Future<void> _updateUserReportCount(String userId, int delta) async {
+  Future<void> _updateUserProductCount(String userId, int delta) async {
     // RTDB update
     try {
       final userRef = _database.ref().child(_usersPath).child(userId);
       final snap = await userRef.get();
       int current = 0;
       if (snap.exists && snap.value is Map) {
-        current = _parseReportsCount(
+        current = _parseProductsCount(
           Map<String, dynamic>.from(snap.value as Map),
         );
       }
       final next = (current + delta).clamp(0, 1 << 31);
-      await userRef.set({_reportsSubmittedKey: next});
+      await userRef.set({_productsSubmittedKey: next});
 
       // Mirror to Firestore
       await _firestore.collection(_usersPath).doc(userId).set({
-        _reportsSubmittedKey: next,
+        _productsSubmittedKey: next,
       }, SetOptions(merge: true));
     } catch (e) {
       if (kDebugMode) {
-        print('Warning: failed to update report count: $e');
+        print('Warning: failed to update product count: $e');
       }
     }
   }
 
-  int _parseReportsCount(Map<String, dynamic> data) {
-    final value = data[_reportsSubmittedKey];
+  int _parseProductsCount(Map<String, dynamic> data) {
+    final value = data[_productsSubmittedKey];
     if (value is int) return value;
     if (value != null) return int.tryParse('$value') ?? 0;
     return 0;

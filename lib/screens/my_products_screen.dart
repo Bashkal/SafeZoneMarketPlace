@@ -3,46 +3,46 @@ import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import '../widgets/image_from_string.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import '../services/report_service.dart';
+import '../services/product_service.dart';
 import '../services/auth_service.dart';
-import '../models/report_model.dart';
-import 'add_report_screen.dart';
+import '../models/product_model.dart';
+import 'add_product_screen.dart';
 
-class MyReportsScreen extends StatefulWidget {
-  const MyReportsScreen({super.key});
+class MyProductsScreen extends StatefulWidget {
+  const MyProductsScreen({super.key});
 
   @override
-  State<MyReportsScreen> createState() => _MyReportsScreenState();
+  State<MyProductsScreen> createState() => _MyProductsScreenState();
 }
 
-class _MyReportsScreenState extends State<MyReportsScreen> {
+class _MyProductsScreenState extends State<MyProductsScreen> {
   static const double _cardRadius = 12;
   static const double _cardPadding = 16;
   static const double _imageAspectRatio = 16 / 9;
 
-  List<Report> _userReports = [];
+  List<Product> _userProducts = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadUserReports();
+    _loadUserProducts();
   }
 
-  Future<void> _loadUserReports() async {
+  Future<void> _loadUserProducts() async {
     final authService = Provider.of<AuthService>(context, listen: false);
-    final reportService = Provider.of<ReportService>(context, listen: false);
+    final productService = Provider.of<ProductService>(context, listen: false);
 
     if (authService.currentUser == null) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final reports = await reportService.fetchUserReports(
+      final products = await productService.fetchUserProducts(
         authService.currentUser!.uid,
       );
       setState(() {
-        _userReports = reports;
+        _userProducts = products;
         _isLoading = false;
       });
     } catch (e) {
@@ -50,17 +50,17 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed to load reports: $e')));
+        ).showSnackBar(SnackBar(content: Text('Failed to load products: $e')));
       }
     }
   }
 
-  Future<void> _deleteReport(Report report) async {
+  Future<void> _deleteProduct(Product product) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Report'),
-        content: const Text('Are you sure you want to delete this report?'),
+        title: const Text('Delete Product'),
+        content: const Text('Are you sure you want to delete this product?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -77,32 +77,32 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     if (!mounted) return; // Added mounted guard
     if (confirmed == true) {
       try {
-        final reportService = Provider.of<ReportService>(
+        final productService = Provider.of<ProductService>(
           context,
           listen: false,
         );
         final authService = Provider.of<AuthService>(context, listen: false);
 
-        await reportService.deleteReport(
-          report.id!,
+        await productService.deleteProduct(
+          product.id!,
           authService.currentUser!.uid,
         );
 
-        await _loadUserReports();
+        await _loadUserProducts();
 
-        // Refresh user data so profile report count stays in sync
+        // Refresh user data so profile product count stays in sync
         await authService.refreshUserData();
 
         if (mounted) { // Check if mounted before showing snackbar
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Report deleted successfully')),
+            const SnackBar(content: Text('Product deleted successfully')),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to delete report: $e'),
+              content: Text('Failed to delete product: $e'),
               backgroundColor: Colors.red,
             ),
           );
@@ -111,18 +111,18 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     }
   }
 
-  void _editReport(Report report) {
+  void _editProduct(Product product) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AddReportScreen(existingReport: report),
+        builder: (context) => AddProductScreen(existingProduct: product),
       ),
-    ).then((_) => _loadUserReports());
+    ).then((_) => _loadUserProducts());
   }
 
   Widget _buildEmptyState(BuildContext context) {
     return RefreshIndicator(
-      onRefresh: _loadUserReports,
+      onRefresh: _loadUserProducts,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
@@ -137,12 +137,12 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'No reports yet',
+                'No products yet',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
               Text(
-                'Start by creating your first report!',
+                'Start by creating your first product!',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -155,17 +155,31 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     );
   }
 
-  Color _getStatusColor(ReportStatus status) {
+  Color _getStatusColor(ProductStatus status) {
     switch (status) {
-      case ReportStatus.pending:
-        return Colors.orange;
-      case ReportStatus.approved:
-        return Colors.blue;
-      case ReportStatus.inProgress:
-        return Colors.amber;
-      case ReportStatus.resolved:
+      case ProductStatus.available:
         return Colors.green;
-      case ReportStatus.rejected:
+      case ProductStatus.soldOut:
+        return Colors.grey;
+      case ProductStatus.free:
+        return Colors.blue;
+      case ProductStatus.reserved:
+        return Colors.amber;
+      case ProductStatus.onsale:
+        return Colors.orange;  
+    }
+  }
+  Color getConditionColor(ProductCondition condition) {
+    switch (condition) {
+      case ProductCondition.newCondition:
+        return Colors.green;
+      case ProductCondition.likeNew:
+        return Colors.lightGreen;
+      case ProductCondition.good:
+        return Colors.yellow;
+      case ProductCondition.fair:
+        return Colors.orange;
+      case ProductCondition.poor:
         return Colors.red;
     }
   }
@@ -175,20 +189,20 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     final authService = Provider.of<AuthService>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Reports')),
+      appBar: AppBar(title: const Text('My Products')),
       body: authService.currentUser == null
-          ? const Center(child: Text('Please sign in to view your reports'))
+          ? const Center(child: Text('Please sign in to view your products'))
           : _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _userReports.isEmpty
+          : _userProducts.isEmpty
           ? _buildEmptyState(context)
           : RefreshIndicator(
-              onRefresh: _loadUserReports,
+              onRefresh: _loadUserProducts,
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: _userReports.length,
+                itemCount: _userProducts.length,
                 itemBuilder: (context, index) {
-                  final report = _userReports[index];
+                  final product = _userProducts[index];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16),
                     shape: RoundedRectangleBorder(
@@ -198,13 +212,13 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Images carousel
-                        if (report.photoUrls.isNotEmpty)
+                        if (product.photoUrls.isNotEmpty)
                           ClipRRect(
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(_cardRadius),
                             ),
-                            child: _ReportImageCarousel(
-                              photoUrls: report.photoUrls,
+                            child: _ProductImageCarousel(
+                              photoUrls: product.photoUrls,
                               aspectRatio: _imageAspectRatio,
                             ),
                           ),
@@ -216,7 +230,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                             children: [
                               // Date
                               Text(
-                                timeago.format(report.createdAt),
+                                timeago.format(product.createdAt),
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
                                       color: Theme.of(
@@ -228,7 +242,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
 
                               // Title
                               Text(
-                                report.title,
+                                product.title,
                                 style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(
                                       fontWeight: FontWeight.bold,
@@ -238,27 +252,59 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                                     ),
                               ),
                               const SizedBox(height: 8),
-
                               // Status
                               Chip(
                                 label: Text(
-                                  report.status.displayName,
+                                  product.status.displayName,
                                   style: const TextStyle(fontSize: 12),
                                 ),
                                 backgroundColor: _getStatusColor(
-                                  report.status,
+                                  product.status,
                                 ).withValues(alpha: 0.2),
                                 labelStyle: TextStyle(
-                                  color: _getStatusColor(report.status),
+                                  color: _getStatusColor(product.status),
                                 ),
                                 padding: EdgeInsets.zero,
                                 visualDensity: VisualDensity.compact,
                               ),
                               const SizedBox(height: 8),
+                              // Condition
+                              Chip(
+                                label: Text(
+                                  product.condition.displayName,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                backgroundColor: getConditionColor(
+                                  product.condition,
+                                ).withValues(alpha: 0.2),
+                                labelStyle: TextStyle(
+                                  color: getConditionColor(product.condition),
+                                ),
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              const SizedBox(height: 8),
+                              //Category
+                              Chip(
+                                label: Text(
+                                  product.category.displayName,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                backgroundColor: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: 0.2),
+                                labelStyle: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              const SizedBox(height: 16),
 
                               // Description
                               Text(
-                                report.description,
+                                product.description,
                                 style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(
                                       color: Theme.of(
@@ -275,7 +321,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                                 children: [
                                   Expanded(
                                     child: OutlinedButton.icon(
-                                      onPressed: () => _editReport(report),
+                                      onPressed: () => _editProduct(product),
                                       icon: const Icon(Icons.edit),
                                       label: const Text('Edit'),
                                     ),
@@ -283,7 +329,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: FilledButton.icon(
-                                      onPressed: () => _deleteReport(report),
+                                      onPressed: () => _deleteProduct(product),
                                       icon: const Icon(Icons.delete),
                                       label: const Text('Delete'),
                                       style: FilledButton.styleFrom(
@@ -306,20 +352,20 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   }
 }
 
-class _ReportImageCarousel extends StatefulWidget {
+class _ProductImageCarousel extends StatefulWidget {
   final List<String> photoUrls;
   final double aspectRatio;
 
-  const _ReportImageCarousel({
+  const _ProductImageCarousel({
     required this.photoUrls,
     required this.aspectRatio,
   });
 
   @override
-  State<_ReportImageCarousel> createState() => _ReportImageCarouselState();
+  State<_ProductImageCarousel> createState() => _ProductImageCarouselState();
 }
 
-class _ReportImageCarouselState extends State<_ReportImageCarousel> {
+class _ProductImageCarouselState extends State<_ProductImageCarousel> {
   late final PageController _pageController;
   int _currentPageIndex = 0;
 
