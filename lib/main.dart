@@ -42,14 +42,15 @@ void main() async {
       await NotificationService.instance.initialize();
     }
 
-    // Request notification permissions (iOS and Android 13+ POST_NOTIFICATIONS)
+    // Request notification permissions (iOS and Android 13+ POST_NOTIFICATIONS).
+    // On web we skip this to avoid the browser permission prompt; web will use in-app dialogs instead.
     final messaging = FirebaseMessaging.instance;
-    await messaging.requestPermission();
+    if (!kIsWeb) {
+      await messaging.requestPermission();
 
-    // Get FCM token
-    await (kIsWeb
-      ? messaging.getToken(vapidKey: WebPushConfig.vapidPublicKey)
-      : messaging.getToken());
+      // Get FCM token (only when permission is applicable)
+      await messaging.getToken();
+    }
 
     // Ensure topic subscriptions are applied at startup (if user saved prefs)
     await _reapplyTopicSubscriptions();
@@ -72,11 +73,11 @@ void main() async {
     // Navigate when user taps a notification (background/terminated)
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       final data = message.data;
-      final reportId = (data['reportId'] ?? data['id'] ?? data['report_id'])?.toString();
-      if (reportId != null && reportId.isNotEmpty) {
+      final productId = (data['productId'] ?? data['id'] ?? data['product_id'])?.toString();
+      if (productId != null && productId.isNotEmpty) {
         AppNavigator.navigatorKey.currentState?.pushNamed(
-          '/report',
-          arguments: reportId,
+          '/product',
+          arguments: productId,
         );
       }
     });
@@ -98,7 +99,7 @@ void _showWebNotificationDialog(RemoteMessage message) {
 
   final title = message.notification?.title ?? 'New Notification';
   final body = message.notification?.body ?? '';
-  final reportId = message.data['reportId']?.toString();
+  final productId = message.data['productId']?.toString();
 
   showDialog(
     context: context,
@@ -116,13 +117,13 @@ void _showWebNotificationDialog(RemoteMessage message) {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Dismiss'),
         ),
-        if (reportId != null && reportId.isNotEmpty)
+        if (productId != null && productId.isNotEmpty)
           FilledButton(
             onPressed: () {
               Navigator.of(context).pop();
               AppNavigator.navigatorKey.currentState?.pushNamed(
-                '/report',
-                arguments: reportId,
+                '/product',
+                arguments: productId,
               );
             },
             child: const Text('View'),
@@ -135,6 +136,9 @@ void _showWebNotificationDialog(RemoteMessage message) {
 // Reapply topic subscriptions based on saved preferences when app starts
 // or when the FCM token refreshes (subscriptions are token-bound).
 Future<void> _reapplyTopicSubscriptions() async {
+  // Topic subscriptions are only supported on mobile; skip on web to avoid prompts/errors.
+  if (kIsWeb) return;
+
   try {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsKey);

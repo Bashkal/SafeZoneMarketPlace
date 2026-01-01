@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
+import 'dart:typed_data';
 import '../models/product_model.dart';
 import '../utils/image_utils.dart';
 
@@ -92,7 +93,7 @@ class ProductService extends ChangeNotifier {
 
   // Compress images and return base64 strings to store in Realtime Database
   Future<List<String>> uploadImagesAsBase64(
-    List<File> images, {
+    List<dynamic> images, {
     int targetWidth = 800,
     int quality = 70,
     int maxImages = 3,
@@ -103,11 +104,30 @@ class ProductService extends ChangeNotifier {
 
     for (int i = 0; i < limit; i++) {
       try {
-        final base64 = await ImageUtils.compressFileToBase64(
-          images[i],
-          targetWidth: targetWidth,
-          quality: quality,
-        );
+        String base64;
+        final image = images[i];
+        
+        if (image is File) {
+          // Handle mobile/desktop File objects
+          base64 = await ImageUtils.compressFileToBase64(
+            image,
+            targetWidth: targetWidth,
+            quality: quality,
+          );
+        } else if (image is Uint8List) {
+          // Handle web Uint8List bytes
+          base64 = await ImageUtils.compressBytesToBase64(
+            image,
+            targetWidth: targetWidth,
+            quality: quality,
+          );
+        } else {
+          if (kDebugMode) {
+            print('Unknown image type: ${image.runtimeType}');
+          }
+          continue;
+        }
+        
         imageBase64.add(base64);
       } catch (e) {
         if (kDebugMode) {
@@ -120,7 +140,7 @@ class ProductService extends ChangeNotifier {
   }
 
   // Create a new product
-  Future<void> createProduct(Product product, List<File> images) async {
+  Future<void> createProduct(Product product, List<dynamic> images) async {
     try {
       // Create a new product node to get a key
       final ref = _database.ref().child(_productsPath).push();
@@ -157,7 +177,7 @@ class ProductService extends ChangeNotifier {
   Future<void> updateProduct(
     String productId,
     Product product,
-    List<File>? newImages, {
+    List<dynamic>? newImages, {
     List<String>? removedPhotoUrls,
   }) async {
     try {

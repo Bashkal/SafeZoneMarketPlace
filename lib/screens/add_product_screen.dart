@@ -34,6 +34,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
 
   ProductCategory _selectedCategory = ProductCategory.other;
   ProductStatus _selectedStatus = ProductStatus.available;
@@ -61,8 +63,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _titleController.text = product.title;
     _descriptionController.text = product.description;
     _priceController.text = product.price.toString();
+    if (product.contactEmail != null) _emailController.text = product.contactEmail!;
+    if (product.contactPhone != null) _phoneController.text = product.contactPhone!;
     _selectedCategory = product.category;
-    _selectedStatus = product.status;
+    _selectedStatus = product.price == 0 ? ProductStatus.free : product.status;
     _selectedCondition = product.condition;
     _selectedLocation = product.location;
     _locationAddress = product.locationAddress;
@@ -74,6 +78,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -188,7 +194,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     }
   }
 
-  Future<void> _submitReport() async {
+  Future<void> _submitProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_selectedLocation == null) {
@@ -212,17 +218,25 @@ class _AddProductScreenState extends State<AddProductScreen> {
       final product = _createProduct(currentUser);
       final isUpdate = widget.existingProduct != null;
 
+      // Combine mobile files and web images
+      final List<dynamic> allImages = [];
+      if (kIsWeb) {
+        allImages.addAll(_webImages); // Add Uint8List for web
+      } else {
+        allImages.addAll(_images); // Add File for mobile
+      }
+
       if (isUpdate) {
         await productService.updateProduct(
           widget.existingProduct!.id!,
           product,
-          _images.isNotEmpty ? _images : null,
+          allImages.isNotEmpty ? allImages : null,
           removedPhotoUrls: _removedPhotoUrls.isNotEmpty
               ? _removedPhotoUrls
               : null,
         );
       } else {
-        await productService.createProduct(product, _images);
+        await productService.createProduct(product, allImages);
       }
 
       // Don't wait for user data refresh - do it in background
@@ -334,6 +348,48 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 24),
+
+            // Contact Information Section
+            Text(
+              'Contact Information (Optional)',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+
+            // Email
+            TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                hintText: 'your@email.com',
+                prefixIcon: Icon(Icons.email),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value != null && value.isNotEmpty) {
+                  final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+                  if (!emailRegex.hasMatch(value)) {
+                    return 'Please enter a valid email';
+                  }
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Phone
+            TextFormField(
+              controller: _phoneController,
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                hintText: '+1 (555) 123-4567',
+                prefixIcon: Icon(Icons.phone),
+              ),
+              keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 24),
             // Status 
@@ -569,7 +625,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
             // Submit Button
             FilledButton(
-              onPressed: _isLoading ? null : _submitReport,
+              onPressed: _isLoading ? null : _submitProduct,
               child: _isLoading
                   ? const SizedBox(
                       height: 20,
@@ -607,6 +663,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       userPhotoUrl: currentUser.photoURL,
       createdAt: existing?.createdAt ?? DateTime.now(),
       status: _selectedStatus,
+      contactEmail: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+      contactPhone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
     );
   }
 }

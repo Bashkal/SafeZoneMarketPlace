@@ -23,7 +23,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   @override
   void initState() {
     super.initState();
-    _categorySelections = {for (final c in ProductCategory.values) c: true};
+    _categorySelections = {for (final c in ProductCategory.values) c: false};
     _loadPrefs();
   }
 
@@ -188,7 +188,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             (c) => c.name == entry.key,
             orElse: () => ProductCategory.other,
           );
-          _categorySelections[category] = entry.value as bool? ?? true;
+          _categorySelections[category] = entry.value as bool? ?? false;
         }
       });
     } catch (_) {

@@ -83,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 16),
 
               Text(
-                'Report and track community issues in your neighborhood',
+                'Buy and sell items in your neighborhood',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

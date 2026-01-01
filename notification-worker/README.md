@@ -71,7 +71,7 @@ const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY);
 ```
 
 ## How it works
-1. Query `/reports` ordered by `createdAt`, starting at worker start time
+1. Query `/products` ordered by `createdAt`, starting at worker start time
 2. On `child_added`, sends topic notification and web user notifications (if opted in)
 3. On `child_changed`, detects status transitions and sends a direct notification to the report owner
 4. Uses `default_channel` Android channel for parity with the app

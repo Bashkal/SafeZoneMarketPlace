@@ -109,8 +109,8 @@ class _FeedScreenState extends State<FeedScreen> {
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    // Status Filter Button
-                    Expanded(
+                // Status Filter Button
+                Expanded(
                   child: PopupMenuButton<ProductStatus?>(
                     tooltip: 'Filter by Status',
                     onSelected: (value) {
@@ -184,23 +184,6 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
                       const PopupMenuDivider(),
                       PopupMenuItem(
-                        value: ProductStatus.soldOut,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                color: Colors.grey,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(ProductStatus.soldOut.displayName),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
                         value: ProductStatus.available,
                         child: Row(
                           children: [
@@ -214,24 +197,6 @@ class _FeedScreenState extends State<FeedScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(ProductStatus.available.displayName),
-                          ],
-                        ),
-                      ),
-                      
-                      PopupMenuItem(
-                        value: ProductStatus.reserved,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                color: Colors.amber,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(ProductStatus.reserved.displayName),
                           ],
                         ),
                       ),
@@ -252,8 +217,57 @@ class _FeedScreenState extends State<FeedScreen> {
                           ],
                         ),
                       ),
-                    
-
+                      PopupMenuItem(
+                        value: ProductStatus.reserved,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                color: Colors.amber,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(ProductStatus.reserved.displayName),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: ProductStatus.onsale,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(ProductStatus.onsale.displayName),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: ProductStatus.soldOut,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: const BoxDecoration(
+                                color: Colors.grey,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(ProductStatus.soldOut.displayName),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -573,7 +587,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     ],
                   ),
                 ),
-                
                 // Clear Filters Button
                 if (_hasFilters) ...[
                   const SizedBox(width: 12),
@@ -582,6 +595,7 @@ class _FeedScreenState extends State<FeedScreen> {
                       setState(() {
                         _selectedStatusFilter = null;
                         _selectedCategoryFilter = null;
+                        _selectedConditionFilter = null;
                       });
                     },
                     icon: const Icon(Icons.refresh, size: 18),
@@ -597,7 +611,6 @@ class _FeedScreenState extends State<FeedScreen> {
               ],
             ),
           ),
-
           // Products list
           Expanded(
             child: productService.isLoading
@@ -605,6 +618,7 @@ class _FeedScreenState extends State<FeedScreen> {
                 : filteredProducts.isEmpty
                 ? RefreshIndicator(
                     onRefresh: () => productService.fetchProducts(),
+                    // Empty state
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
@@ -731,7 +745,7 @@ class ProductSearchDelegate extends SearchDelegate<Product?> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Search for reports',
+              'Search for products',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -861,132 +875,157 @@ class _ProductCardState extends State<ProductCard> {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // User info header
-          ListTile(
-            leading: CircleAvatar(
-              radius: 20,
-              backgroundImage: product.userPhotoUrl != null && product.userPhotoUrl!.isNotEmpty
-                  ? NetworkImage(product.userPhotoUrl!)
-                  : null,
-              child: product.userPhotoUrl == null || product.userPhotoUrl!.isEmpty
-                  ? Text(
-                      product.userName.isNotEmpty ? product.userName[0].toUpperCase() : '?',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    )
-                  : null,
-            ),
-            title: Text(product.userName),
-            subtitle: Text(timeago.format(product.createdAt)),
-            trailing: Chip(
-              label: Text(
-                product.status.displayName,
-                style: const TextStyle(fontSize: 12),
-              ),
-              backgroundColor: _getStatusColor(context).withValues(alpha: 0.2),
-              labelStyle: TextStyle(color: _getStatusColor(context)),
-              padding: EdgeInsets.zero,
-            ),
-          ),
-
-          // Images carousel
-          if (product.photoUrls.isNotEmpty)
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context).copyWith(
-                        dragDevices: {
-                          PointerDeviceKind.touch,
-                          PointerDeviceKind.mouse,
-                        },
-                      ),
-                      child: PageView.builder(
-                        controller: _pageController,
-                        itemCount: product.photoUrls.length,
-                        itemBuilder: (context, index) {
-                          return ImageFromString(
-                            src: product.photoUrls[index],
-                            fit: BoxFit.contain,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
+      child: InkWell(
+        onTap: product.id == null
+            ? null
+            : () => Navigator.of(context).pushNamed(
+                  '/product',
+                  arguments: product.id,
                 ),
-                // Image counter badge
-                if (product.photoUrls.length > 1)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${_currentPageIndex + 1}/${product.photoUrls.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // User info header
+            ListTile(
+              leading: CircleAvatar(
+                radius: 20,
+                backgroundImage: product.userPhotoUrl != null && product.userPhotoUrl!.isNotEmpty
+                    ? NetworkImage(product.userPhotoUrl!)
+                    : null,
+                child: product.userPhotoUrl == null || product.userPhotoUrl!.isEmpty
+                    ? Text(
+                        product.userName.isNotEmpty ? product.userName[0].toUpperCase() : '?',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      )
+                    : null,
+              ),
+              title: Text(product.userName),
+              subtitle: Text(timeago.format(product.createdAt)),
+              trailing: Chip(
+                label: Text(
+                  product.status.displayName,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                backgroundColor: _getStatusColor(context).withValues(alpha: 0.2),
+                labelStyle: TextStyle(color: _getStatusColor(context)),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+            // Images carousel
+            if (product.photoUrls.isNotEmpty)
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.mouse,
+                          },
+                        ),
+                        child: PageView.builder(
+                          controller: _pageController,
+                          itemCount: product.photoUrls.length,
+                          itemBuilder: (context, index) {
+                            return ImageFromString(
+                              src: product.photoUrls[index],
+                              fit: BoxFit.contain,
+                            );
+                          },
                         ),
                       ),
                     ),
                   ),
-              ],
-            ),
+                  // Image counter badge
+                  if (product.photoUrls.length > 1)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_currentPageIndex + 1}/${product.photoUrls.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  Text(
+                    product.title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Price
+                  Text(
+                    '\$${product.price?.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Category
+                  Row(
+                    children: [
+                      Chip(
+                        label: Text(
+                          product.category.displayName,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
+                      labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    const SizedBox(width: 8),
+                    //Condition
+                    Chip(
+                      label: Text(
+                        product.condition.displayName,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.secondaryContainer,
+                      labelStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                      ),
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
 
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                Text(
-                  product.title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                //price
-                Text(
-                  '\$${product.price.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Category
-                Chip(
-                  label: Text(
-                    product.category.displayName,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  backgroundColor: Theme.of(
-                    context,
-                  ).colorScheme.primaryContainer,
-                  labelStyle: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                ),
-                const SizedBox(height: 8),
 
                 // Description
                 Text(
@@ -1000,7 +1039,6 @@ class _ProductCardState extends State<ProductCard> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
-
 
                 // Location
                 Row(
@@ -1171,7 +1209,8 @@ class _ProductCardState extends State<ProductCard> {
               ],
             ),
           ),
-        ],
+        ]
+        ),
       ),
     );
   }

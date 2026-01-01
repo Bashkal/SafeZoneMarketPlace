@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'feed_screen.dart';
 import 'map_screen.dart';
 import 'my_products_screen.dart';
+import 'favorites_screen.dart';
 import 'profile_screen.dart';
 import 'add_product_screen.dart';
 
@@ -31,6 +32,11 @@ class _HomeScreenState extends State<HomeScreen> {
       label: 'My products',
     ),
     NavigationDestination(
+      icon: Icon(Icons.favorite_outline),
+      selectedIcon: Icon(Icons.favorite),
+      label: 'Favorites',
+    ),
+    NavigationDestination(
       icon: Icon(Icons.person_outline),
       selectedIcon: Icon(Icons.person),
       label: 'Profile',
@@ -47,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
       FeedScreen(),
       MapScreen(),
       MyProductsScreen(),
+      FavoritesScreen(),
       ProfileScreen(),
     ];
   }
@@ -57,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _navigateToAddReport() {
+  void _navigateToAddProduct() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AddProductScreen()),
@@ -94,16 +101,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     label: Text('My Products'),
                   ),
                   NavigationRailDestination(
+                    icon: Icon(Icons.favorite_outline),
+                    selectedIcon: Icon(Icons.favorite),
+                    label: Text('Favorites'),
+                  ),
+                  NavigationRailDestination(
                     icon: Icon(Icons.person_outline),
                     selectedIcon: Icon(Icons.person),
                     label: Text('Profile'),
                   ),
                 ],
-                trailing: _currentIndex != 3
+                trailing: _currentIndex != 4
                     ? Padding(
                         padding: const EdgeInsets.only(top: 16),
                         child: FloatingActionButton(
-                          onPressed: _navigateToAddReport,
+                          onPressed: _navigateToAddProduct,
                           child: const Icon(Icons.add),
                         ),
                       )
@@ -128,11 +140,11 @@ class _HomeScreenState extends State<HomeScreen> {
         onDestinationSelected: _onTabTapped,
         destinations: _destinations,
       ),
-      floatingActionButton: _currentIndex != 3
+      floatingActionButton: _currentIndex != 4
           ? FloatingActionButton.extended(
-              onPressed: _navigateToAddReport,
+              onPressed: _navigateToAddProduct,
               icon: const Icon(Icons.add),
-              label: const Text('Report'),
+              label: const Text('Post Product'),
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,

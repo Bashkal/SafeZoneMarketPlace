@@ -66,7 +66,7 @@ class AppUser {
     String? displayName,
     String? photoUrl,
     DateTime? createdAt,
-    int? reportsSubmitted,
+    int? productsSubmitted,
     UserRole? role,
   }) {
     return AppUser(

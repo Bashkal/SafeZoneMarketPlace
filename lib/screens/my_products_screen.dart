@@ -164,9 +164,9 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
       case ProductStatus.free:
         return Colors.blue;
       case ProductStatus.reserved:
-        return Colors.amber;
+        return Colors.orange;
       case ProductStatus.onsale:
-        return Colors.orange;  
+        return Colors.red;  
     }
   }
   Color getConditionColor(ProductCondition condition) {
@@ -198,17 +198,20 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
           ? _buildEmptyState(context)
           : RefreshIndicator(
               onRefresh: _loadUserProducts,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _userProducts.length,
-                itemBuilder: (context, index) {
-                  final product = _userProducts[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(_cardRadius),
-                    ),
-                    child: Column(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _userProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = _userProducts[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(_cardRadius),
+                        ),
+                        child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Images carousel
@@ -347,8 +350,8 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
                   );
                 },
               ),
-            ),
-    );
+            ),          ),
+        ),    );
   }
 }
 

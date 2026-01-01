@@ -10,7 +10,7 @@ import '../models/user_model.dart';
 
 class AuthService extends ChangeNotifier {
   static const String _usersCollection = 'users';
-  static const String _reportsSubmittedKey = 'reportsSubmitted';
+  static const String _productsSubmittedKey = 'productsSubmitted';
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
@@ -116,7 +116,7 @@ class AuthService extends ChangeNotifier {
         }
       } catch (_) {}
 
-      final rtdbCount = await _getReportsSubmitted(uid);
+      final rtdbCount = await _getProductsSubmitted(uid);
 
       // Build AppUser by merging FirebaseAuth, RTDB count, and Firestore role
       final u = _auth.currentUser;
@@ -212,14 +212,14 @@ class AuthService extends ChangeNotifier {
     final userDoc = _firestore.collection(_usersCollection).doc(user.uid);
     final docSnapshot = await userDoc.get();
 
-    // Ensure RTDB user node exists with reportsSubmitted
+    // Ensure RTDB user node exists with productsSubmitted
     try {
       final userRef = _database.ref().child(_usersCollection).child(user.uid);
       final snap = await userRef.get();
       final current = snap.exists && snap.value is Map
-          ? _parseReportsCount(Map<String, dynamic>.from(snap.value as Map))
+          ? _parseProductsCount(Map<String, dynamic>.from(snap.value as Map))
           : 0;
-      await userRef.set({_reportsSubmittedKey: current});
+      await userRef.set({_productsSubmittedKey: current});
     } catch (e) {
       if (kDebugMode) {
         print('Warning: failed to init RTDB user node: $e');
@@ -342,7 +342,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<int> _getReportsSubmitted(String uid) async {
+  Future<int> _getProductsSubmitted(String uid) async {
     try {
       final rtdbSnap = await _database
           .ref()
@@ -350,7 +350,7 @@ class AuthService extends ChangeNotifier {
           .child(uid)
           .get();
       if (rtdbSnap.exists && rtdbSnap.value is Map) {
-        return _parseReportsCount(
+        return _parseProductsCount(
           Map<String, dynamic>.from(rtdbSnap.value as Map),
         );
       }
@@ -358,8 +358,8 @@ class AuthService extends ChangeNotifier {
     return 0;
   }
 
-  int _parseReportsCount(Map<String, dynamic> data) {
-    final value = data[_reportsSubmittedKey];
+  int _parseProductsCount(Map<String, dynamic> data) {
+    final value = data[_productsSubmittedKey];
     if (value is int) return value;
     if (value != null) return int.tryParse('$value') ?? 0;
     return 0;

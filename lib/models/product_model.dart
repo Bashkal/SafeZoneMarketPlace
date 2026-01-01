@@ -44,7 +44,7 @@ class Product {
   final String? id;
   final String title;
   final String description;
-  final double price;
+  final double? price;
   final ProductStatus status;
   final ProductCategory category;
   final List<String> photoUrls;
@@ -53,6 +53,8 @@ class Product {
   final String userId;
   final String userName;
   final String? userPhotoUrl;
+  final String? contactEmail;
+  final String? contactPhone;
   final DateTime createdAt;
   final DateTime? updatedAt;
   final ProductCondition condition;
@@ -63,7 +65,7 @@ class Product {
     this.id,
     required this.title,
     required this.description,
-    required this.price,
+    this.price,
     required this.category,
     required this.photoUrls,
     required this.location,
@@ -71,6 +73,8 @@ class Product {
     required this.userId,
     required this.userName,
     this.userPhotoUrl,
+    this.contactEmail,
+    this.contactPhone,
     required this.createdAt,
     this.updatedAt,
     required this.status,
@@ -92,6 +96,8 @@ class Product {
       'userId': userId,
       'userName': userName,
       if (userPhotoUrl != null) 'userPhotoUrl': userPhotoUrl,
+      if (contactEmail != null) 'contactEmail': contactEmail,
+      if (contactPhone != null) 'contactPhone': contactPhone,
       'createdAt': createdAt.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       'status': status.name,
@@ -126,6 +132,8 @@ class Product {
       userId: map['userId'] as String? ?? '',
       userName: map['userName'] as String? ?? '',
       userPhotoUrl: map['userPhotoUrl'] as String?,
+      contactEmail: map['contactEmail'] as String?,
+      contactPhone: map['contactPhone'] as String?,
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'] as String)
           : DateTime.now(),
@@ -160,6 +168,8 @@ class Product {
     String? userId,
     String? userName,
     String? userPhotoUrl,
+    String? contactEmail,
+    String? contactPhone,
     DateTime? createdAt,
     DateTime? updatedAt,
     ProductCondition? condition,
@@ -178,6 +188,8 @@ class Product {
       userId: userId ?? this.userId,
       userName: userName ?? this.userName,
       userPhotoUrl: userPhotoUrl ?? this.userPhotoUrl,
+      contactEmail: contactEmail ?? this.contactEmail,
+      contactPhone: contactPhone ?? this.contactPhone,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       status: status ?? this.status,

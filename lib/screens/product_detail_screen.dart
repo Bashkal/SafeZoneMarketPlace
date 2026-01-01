@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/product_model.dart';
 import '../services/product_service.dart';
 import '../widgets/image_from_string.dart';
@@ -167,7 +168,7 @@ IconData _getCategoryIcon(ProductCategory category) {
                                 const Spacer(),
                                 // Price
                                 Text(
-                                  product.price > 0 ? '\$${product.price.toStringAsFixed(2)}' : 'Free',
+                                  product.price != null && product.price! > 0 ? '\$${product.price!.toStringAsFixed(2)}' : 'Free',
                                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.w600,
                                         color: Theme.of(context).colorScheme.primary,
@@ -212,20 +213,79 @@ IconData _getCategoryIcon(ProductCategory category) {
                             const SizedBox(height: 16),
 
                             // Location
-                            Row(
-                              children: [
-                                Icon(Icons.location_on, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    product.locationAddress,
-                                    style: Theme.of(context).textTheme.bodySmall,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
+                            GestureDetector(
+                              onTap: () {
+                                final lat = product.location.latitude;
+                                final lng = product.location.longitude;
+                                final mapsUrl = Uri.parse(
+                                  'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+                                );
+                                _launchUrl(context, mapsUrl.toString());
+                              },
+                              child: MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.location_on, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        product.locationAddress,
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
+                            const SizedBox(height: 16),
+
+                            // Contact Section
+                            if (product.contactEmail != null || product.contactPhone != null)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Contact Seller',
+                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      if (product.contactEmail != null && product.contactEmail!.isNotEmpty)
+                                        ActionChip(
+                                          avatar: const Icon(Icons.email, size: 18),
+                                          label: Text(product.contactEmail!),
+                                          onPressed: () {
+                                            final Uri emailUri = Uri(
+                                              scheme: 'mailto',
+                                              path: product.contactEmail,
+                                            );
+                                            _launchUrl(context, emailUri.toString());
+                                          },
+                                        ),
+                                      if (product.contactPhone != null && product.contactPhone!.isNotEmpty)
+                                        ActionChip(
+                                          avatar: const Icon(Icons.phone, size: 18),
+                                          label: Text(product.contactPhone!),
+                                          onPressed: () {
+                                            final Uri phoneUri = Uri(
+                                              scheme: 'tel',
+                                              path: product.contactPhone,
+                                            );
+                                            _launchUrl(context, phoneUri.toString());
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                       ),
@@ -276,6 +336,67 @@ IconData _getCategoryIcon(ProductCategory category) {
       ),
     );
   }
+
+  void _launchUrl(BuildContext context, String urlString) async {
+    try {
+      final Uri uri = Uri.parse(urlString);
+      
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        // Fallback: show dialog with contact info to copy
+        if (context.mounted) {
+          final contactValue = urlString.replaceFirst(RegExp(r'^(mailto:|tel:)'), '');
+          final isMail = urlString.startsWith('mailto:');
+          
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(isMail ? 'Email' : 'Phone'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SelectableText(
+                    contactValue,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Close'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    final clipboard = contactValue;
+                    // Copy to clipboard using basic method
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Copied: $contactValue'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Copy'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
 }
 
 class _DetailImageCarousel extends StatefulWidget {
@@ -314,21 +435,27 @@ class _DetailImageCarouselState extends State<_DetailImageCarousel> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.touch,
-                PointerDeviceKind.mouse,
-              },
-            ),
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: widget.photoUrls.length,
-              itemBuilder: (context, index) {
-                return ImageFromString(src: widget.photoUrls[index], fit: BoxFit.cover);
-              },
+        ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxHeight: 500,
+            minHeight: 300,
+          ),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context).copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                },
+              ),
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: widget.photoUrls.length,
+                itemBuilder: (context, index) {
+                  return ImageFromString(src: widget.photoUrls[index], fit: BoxFit.contain);
+                },
+              ),
             ),
           ),
         ),

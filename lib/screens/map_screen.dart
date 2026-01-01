@@ -229,7 +229,7 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                           //Price
                           Text(
-                            '\$${_selectedProduct!.price.toStringAsFixed(2)}',
+                            '\$${_selectedProduct!.price?.toStringAsFixed(2)}',
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -546,7 +546,7 @@ class MapSearchDelegate extends SearchDelegate<Product?> {
               ),
               //Price
               Text(
-                '\$${product.price.toStringAsFixed(2)}',
+                '\$${product.price?.toStringAsFixed(2)}',
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
               Text(

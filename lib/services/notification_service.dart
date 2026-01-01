@@ -46,7 +46,7 @@ class NotificationService {
     try {
       final data = jsonDecode(payload);
       if (data is Map) {
-        final productId = (data['productId'] ?? data['id'] ?? data['report_id'])?.toString();
+        final productId = (data['productId'] ?? data['id'] ?? data['product_id'])?.toString();
         if (productId != null && productId.isNotEmpty) {
           AppNavigator.navigatorKey.currentState?.pushNamed(
             '/product',

@@ -66,6 +66,34 @@ class ImageUtils {
     }
   }
 
+  // Compresses Uint8List bytes (for web) and returns base64-encoded JPEG
+  static Future<String> compressBytesToBase64(
+    Uint8List bytes, {
+    int targetWidth = defaultTargetWidth,
+    int quality = defaultQuality,
+  }) async {
+    try {
+      final result = await FlutterImageCompress.compressWithList(
+        bytes,
+        minWidth: targetWidth,
+        minHeight: targetWidth,
+        quality: quality,
+        format: CompressFormat.jpeg,
+      );
+
+      if (result.isEmpty) {
+        throw Exception('Image compression returned empty result');
+      }
+
+      return base64Encode(result);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error compressing bytes: $e');
+      }
+      rethrow;
+    }
+  }
+
   // Helper to convert base64 string back to bytes
   static Uint8List base64ToBytes(String base64String) {
     return base64Decode(normalizeBase64(base64String));
