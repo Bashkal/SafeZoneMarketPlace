@@ -1,0 +1,21 @@
+# SafeZone Marketplace – Copilot Hints
+- App is Flutter (3.9+) using Provider + Firebase (Auth, RTDB, Firestore, FCM, Storage) with a web-friendly setup; entry bootstraps Firebase/FCM and wraps providers in [lib/main.dart](lib/main.dart).
+- Navigation relies on [lib/navigation/app_navigator.dart](lib/navigation/app_navigator.dart) holding `navigatorKey`; notification taps and web popups push `'/product'` with a productId argument.
+- Theme toggling and seed color come from [lib/providers/theme_provider.dart](lib/providers/theme_provider.dart); use `ThemeProvider` in new screens to respect persisted dark mode.
+- Data model: products live in RTDB under `products`; definition and enums in [lib/models/product_model.dart](lib/models/product_model.dart) (category/status/condition names must match enums when writing to RTDB/Firestore).
+- User model + roles in [lib/models/user_model.dart](lib/models/user_model.dart); only `UserRole.admin` should trigger admin-only flows.
+- Auth flow: [lib/services/auth_service.dart](lib/services/auth_service.dart) handles Google sign-in (popup on web), merges Firestore user doc + RTDB counters, and syncs FCM tokens to Firestore (`fcmTokens` array + `fcmTokenPlatform`). Reuse its methods instead of talking to Firebase directly.
+- Product CRUD: [lib/services/product_service.dart](lib/services/product_service.dart) writes to RTDB `products`, maintains user product counts in both RTDB and Firestore (`productsSubmitted`), and sorts by `createdAt` desc. Use its APIs so counters and fetch refreshes stay consistent.
+- Images are stored as base64 strings in `photoUrls`; compression/normalization lives in [lib/utils/image_utils.dart](lib/utils/image_utils.dart). Upload helpers cap to 3 images and compress to ~800px; call `uploadImagesAsBase64` before setting `photoUrls`.
+- Image rendering: [lib/widgets/image_from_string.dart](lib/widgets/image_from_string.dart) handles network vs base64; prefer it in new UI to avoid duplicated heuristics.
+- Notifications: [lib/main.dart](lib/main.dart) registers background handlers and re-applies saved topic subscriptions (`notification_categories` in SharedPreferences) on startup/token refresh. Foreground notifications use [lib/services/notification_service.dart](lib/services/notification_service.dart) and skip alerts if the current user created the product (checks `message.data['userId']`).
+- Web push uses [lib/config/web_push_config.dart](lib/config/web_push_config.dart) VAPID key; update when changing Firebase web push certs.
+- Route to product detail by pushing `'/product'` with a productId string; [lib/main.dart](lib/main.dart) maps it to `ProductDetailScreen`.
+- Location fields use `latlong2.LatLng`; keep `latitude`, `longitude`, and `locationAddress` aligned when writing product maps.
+- Favorites are tracked in RTDB (`favorites` int + `favoritedBy` list); use `toggleFavorite` to avoid manual counters.
+- Worker service: [notification-worker/worker.js](notification-worker/worker.js) watches RTDB `/products` and sends FCM topic notifications (`category_<name>`) plus direct status-change alerts. Requires `serviceAccountKey.json` or `SERVICE_ACCOUNT_KEY` env; start with `npm start` inside `notification-worker`.
+- Typical app workflow: `flutter pub get` → ensure Firebase config (`lib/firebase_options.dart`/`firebase.json`) is valid → `flutter run` (add `-d chrome` for web). Web notifications show an in-app dialog instead of browser prompt.
+- Keep secrets out of repo: `serviceAccountKey.json` is gitignored; do not hardcode Firebase keys beyond generated `firebase_options.dart`.
+- When adding new data fields, update `Product.toMap/fromMap` and any RTDB consumers (worker and client) together to avoid parsing errors.
+- Prefer ChangeNotifier-based providers already registered in `MultiProvider` (AuthService, ProductService, ThemeProvider); avoid creating new global singletons unless necessary.
+- For new notification flows, ensure payload includes `productId` (or `id`/`product_id`) to keep navigation on tap working across mobile/web.
