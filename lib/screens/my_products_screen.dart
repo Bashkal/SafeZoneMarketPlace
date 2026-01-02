@@ -189,7 +189,16 @@ class _MyProductsScreenState extends State<MyProductsScreen> {
     final authService = Provider.of<AuthService>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Products')),
+      appBar: AppBar(
+        title: const Text('My Products'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadUserProducts,
+            tooltip: 'Refresh products',
+          ),
+        ],
+      ),
       body: authService.currentUser == null
           ? const Center(child: Text('Please sign in to view your products'))
           : _isLoading

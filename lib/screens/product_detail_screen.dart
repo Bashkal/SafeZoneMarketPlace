@@ -75,7 +75,19 @@ IconData _getCategoryIcon(ProductCategory category) {
     final ref = FirebaseDatabase.instance.ref('products/$productId');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Product Details')),
+      appBar: AppBar(
+        title: const Text('Product Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              // Force a rebuild by setting state
+              (context as Element).markNeedsBuild();
+            },
+            tooltip: 'Refresh product',
+          ),
+        ],
+      ),
       body: StreamBuilder<DatabaseEvent>(
         stream: ref.onValue,
         builder: (context, snapshot) {

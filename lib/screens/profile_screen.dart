@@ -122,7 +122,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final appUser = authService.currentAppUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile & Settings')),
+      appBar: AppBar(
+        title: const Text('Profile & Settings'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => authService.refreshUserData(),
+            tooltip: 'Refresh profile',
+          ),
+        ],
+      ),
       body: user == null
           ? const Center(child: Text('Please sign in'))
           : RefreshIndicator(

@@ -93,6 +93,11 @@ class _FeedScreenState extends State<FeedScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => productService.fetchProducts(),
+            tooltip: 'Refresh products',
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             onPressed: _openSearch,
             tooltip: 'Search products',

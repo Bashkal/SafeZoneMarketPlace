@@ -96,13 +96,31 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
 
     if (!isAdmin) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Admin: Manage Users')),
+        appBar: AppBar(
+          title: const Text('Admin: Manage Users'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadUsers,
+              tooltip: 'Refresh users',
+            ),
+          ],
+        ),
         body: const Center(child: Text('Only admins can access this page.')),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin: Manage Users')),
+      appBar: AppBar(
+        title: const Text('Admin: Manage Users'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadUsers,
+            tooltip: 'Refresh users',
+          ),
+        ],
+      ),
       body: Column(
             children: [
               Padding(

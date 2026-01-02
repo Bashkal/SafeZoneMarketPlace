@@ -16,7 +16,16 @@ class FavoritesScreen extends StatelessWidget {
 
     if (currentUserId == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Favorites')),
+        appBar: AppBar(
+          title: const Text('Favorites'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => productService.fetchProducts(),
+              tooltip: 'Refresh favorites',
+            ),
+          ],
+        ),
         body: const Center(
           child: Text('Please sign in to view your favorites'),
         ),
@@ -28,7 +37,16 @@ class FavoritesScreen extends StatelessWidget {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Favorites')),
+      appBar: AppBar(
+        title: const Text('Favorites'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => productService.fetchProducts(),
+            tooltip: 'Refresh favorites',
+          ),
+        ],
+      ),
       body: favoriteProducts.isEmpty
           ? Center(
               child: Column(
